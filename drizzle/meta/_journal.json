@@ -1,0 +1,62 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1769787668408,
+      "tag": "0000_perfect_adam_warlock",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1769787700000,
+      "tag": "0001_enable_pgvector",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1770058932669,
+      "tag": "0002_lyrical_toad_men",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1770150419345,
+      "tag": "0003_unique_war_machine",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1770159550981,
+      "tag": "0004_bitter_the_phantom",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1770305192359,
+      "tag": "0005_unknown_ma_gnuci",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1770308010698,
+      "tag": "0006_sleepy_black_knight",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1770315538205,
+      "tag": "0007_funny_kitty_pryde",
+      "breakpoints": true
+    }
+  ]
+}
