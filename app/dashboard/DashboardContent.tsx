@@ -39,6 +39,95 @@ interface AnimeItem {
   status: string | null;
 }
 
+interface DropdownOption<T extends string> {
+  value: T;
+  label: string;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Custom dropdown (dark theme)                                       */
+/* ------------------------------------------------------------------ */
+
+function CustomDropdown<T extends string>({
+  value,
+  options,
+  onChange,
+}: {
+  value: T;
+  options: DropdownOption<T>[];
+  onChange: (v: T) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  /* close on outside click */
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const selected = options.find((o) => o.value === value);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={`flex items-center gap-1 rounded-lg border bg-[#1A1625] py-2 pl-3 pr-8 text-sm text-[#E8E0F0] outline-none transition-colors ${
+          open
+            ? "border-[#E064D6]"
+            : "border-[#2A2440] hover:border-[#3D3560]"
+        }`}
+      >
+        {selected?.label}
+        <svg
+          className={`pointer-events-none absolute right-2 h-4 w-4 text-[#8B7FA0] transition-transform duration-200 ${
+            open ? "rotate-180" : ""
+          }`}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M19 9l-7 7-7-7"
+          />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full z-50 mt-1 min-w-full overflow-hidden rounded-lg border border-[#2A2440] bg-[#1C1830] py-1 shadow-[0_8px_32px_rgba(0,0,0,0.45)]">
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                onChange(opt.value);
+                setOpen(false);
+              }}
+              className={`block w-full whitespace-nowrap px-4 py-2 text-left text-sm transition-colors ${
+                opt.value === value
+                  ? "bg-[#E064D6]/15 text-[#E064D6]"
+                  : "text-[#C8BDD9] hover:bg-[#28223E] hover:text-[#E8E0F0]"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
@@ -54,7 +143,7 @@ export default function DashboardContent({
   const [selectedGenre, setSelectedGenre] = useState("Overall");
   const [searchQuery, setSearchQuery] = useState("");
   const [source, setSource] = useState<"user" | "all">("user");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   /* ---------- data state ---------- */
   const [allItems, setAllItems] = useState<AnimeItem[]>([]);
@@ -332,58 +421,24 @@ export default function DashboardContent({
           </div>
 
           {/* source dropdown */}
-          <div className="relative">
-            <select
-              value={source}
-              onChange={(e) =>
-                setSource(e.target.value as "user" | "all")
-              }
-              className="cursor-pointer appearance-none rounded-lg border border-[#2A2440] bg-[#1A1625] py-2 pl-3 pr-8 text-sm text-[#E8E0F0] outline-none transition-colors focus:border-[#E064D6]"
-            >
-              <option value="user">Your anime</option>
-              <option value="all">All anime</option>
-            </select>
-            <svg
-              className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8B7FA0]"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
-          </div>
+          <CustomDropdown
+            value={source}
+            options={[
+              { value: "user", label: "Your anime" },
+              { value: "all", label: "All anime" },
+            ]}
+            onChange={setSource}
+          />
 
           {/* sort dropdown */}
-          <div className="relative">
-            <select
-              value={sortOrder}
-              onChange={(e) =>
-                setSortOrder(e.target.value as "asc" | "desc")
-              }
-              className="cursor-pointer appearance-none rounded-lg border border-[#2A2440] bg-[#1A1625] py-2 pl-3 pr-8 text-sm text-[#E8E0F0] outline-none transition-colors focus:border-[#E064D6]"
-            >
-              <option value="asc">Sort by: Rating ASC</option>
-              <option value="desc">Sort by: Rating DESC</option>
-            </select>
-            <svg
-              className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8B7FA0]"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
-          </div>
+          <CustomDropdown
+            value={sortOrder}
+            options={[
+              { value: "desc", label: "Sort by: Rating DESC" },
+              { value: "asc", label: "Sort by: Rating ASC" },
+            ]}
+            onChange={setSortOrder}
+          />
         </div>
 
         {/* ---- initial loading ---- */}
@@ -414,9 +469,9 @@ export default function DashboardContent({
             )}
 
             {/* anime rows */}
-            {displayedItems.map((anime) => (
+            {displayedItems.map((anime, idx) => (
               <div
-                key={`${anime.id}-${displayStart}`}
+                key={`${displayStart + idx}-${anime.id}`}
                 onClick={() =>
                   router.push(`/dashboard/${anime.id}`)
                 }
