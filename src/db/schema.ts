@@ -75,9 +75,9 @@ export const userRating = pgTable(
       .notNull()
       .references(() => allAnime.id),
   },
-  (table) => ({
-    userAnimeUnique: unique("user_rating_user_anime_unique").on(table.userId, table.animeId),
-  })
+  (table) => [
+    unique("user_rating_user_anime_unique").on(table.userId, table.animeId),
+  ]
 );
 
 export const genre = pgTable("genre", {

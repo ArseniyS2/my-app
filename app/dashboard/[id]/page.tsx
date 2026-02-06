@@ -15,34 +15,35 @@ export default async function DashboardAnimePage({
   const { id } = await params;
 
   return (
-    <div className="min-h-screen bg-zinc-50 font-sans dark:bg-zinc-950">
-      <header className="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="mx-auto flex h-14 max-w-4xl items-center justify-between px-4">
+    <div className="min-h-screen bg-[#0D0B14] text-[#E8E0F0]">
+      <header className="sticky top-0 z-30 border-b border-[#2A2440] bg-[#13111C]/90 backdrop-blur-md">
+        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
           <Link
             href="/dashboard"
-            className="text-lg font-semibold text-zinc-900 dark:text-zinc-50"
+            className="text-lg font-semibold tracking-tight"
           >
             Kizuna
           </Link>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-zinc-600 dark:text-zinc-400">
+            <span className="text-sm text-[#8B7FA0]">
               {session.user.username}
             </span>
             <SignOutButton />
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-4xl px-4 py-8">
+
+      <main className="mx-auto max-w-5xl px-4 py-8">
         <Link
           href="/dashboard"
-          className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+          className="text-sm text-[#8B7FA0] transition-colors hover:text-[#E8E0F0]"
         >
           ← Back to dashboard
         </Link>
-        <h2 className="mt-4 text-xl font-semibold text-zinc-900 dark:text-zinc-50">
+        <h2 className="mt-4 text-xl font-semibold">
           Anime #{id}
         </h2>
-        <p className="mt-2 text-zinc-600 dark:text-zinc-400">
+        <p className="mt-2 text-[#8B7FA0]">
           Anime details will be shown here. (Coming soon.)
         </p>
       </main>
