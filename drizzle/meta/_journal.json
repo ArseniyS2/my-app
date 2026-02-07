@@ -57,6 +57,13 @@
       "when": 1770315538205,
       "tag": "0007_funny_kitty_pryde",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1770479205457,
+      "tag": "0008_faulty_polaris",
+      "breakpoints": true
     }
   ]
 }

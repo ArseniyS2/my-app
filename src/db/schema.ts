@@ -40,6 +40,7 @@ export const allAnime = pgTable("all_anime", {
   franchiseId: integer("franchise_id").notNull(),
   anilistId: integer("anilist_id").notNull().unique(),
   coverImage: text("cover_image").notNull(),
+  coverImageLarge: text("cover_image_large").notNull().default(""),
   avgScore: integer("avg_score").notNull(),
   episodeNumber: integer("episode_number").notNull(),
   releaseYear: integer("release_year").notNull(),

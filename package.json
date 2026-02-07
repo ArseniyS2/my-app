@@ -14,6 +14,7 @@
     "db:seed": "bun run src/db/seed.ts",
     "db:import-genres-tags": "bun run src/db/import-genres-tags.ts",
     "db:import-anime": "bun run src/db/import-anime.ts",
+    "db:import-cover-images": "bun run src/db/import-cover-images.ts",
     "db:clear-anime-data": "bun run src/db/clear-anime-data.ts",
     "db:import-embeddings": "python3 scripts/import_embeddings.py",
     "db:import-user-ratings": "bun run src/db/import-user-ratings.ts",

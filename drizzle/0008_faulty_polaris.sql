@@ -1,0 +1,1 @@
+ALTER TABLE "all_anime" ADD COLUMN "cover_image_large" text DEFAULT '' NOT NULL;
