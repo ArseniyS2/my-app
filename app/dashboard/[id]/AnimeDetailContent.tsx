@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect, useTransition } from "react";
+import { useState, useRef, useEffect, useTransition, useMemo } from "react";
+import DOMPurify from "isomorphic-dompurify";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -143,6 +144,16 @@ export default function AnimeDetailContent({
   const [scoreEditing, setScoreEditing] = useState(false);
   const [scoreDraft, setScoreDraft] = useState(
     initialRating?.rating?.toString() ?? ""
+  );
+
+  /* sanitise HTML synopsis to prevent XSS */
+  const sanitizedSynopsis = useMemo(
+    () =>
+      DOMPurify.sanitize(anime.synopsis, {
+        ALLOWED_TAGS: ["br", "i", "b", "em", "strong", "a", "p", "span"],
+        ALLOWED_ATTR: ["href", "target", "rel"],
+      }),
+    [anime.synopsis]
   );
 
   const statusRef = useRef<HTMLDivElement>(null);
@@ -460,10 +471,10 @@ export default function AnimeDetailContent({
               )}
             </div>
 
-            {/* synopsis (may contain <br>, <i>, etc. from AniList) */}
+            {/* synopsis (may contain <br>, <i>, etc. from AniList — sanitised) */}
             <div
               className="mt-4 leading-relaxed text-[#B8AEC8] [&_i]:italic [&_b]:font-semibold [&_a]:text-[#E064D6] [&_a]:underline"
-              dangerouslySetInnerHTML={{ __html: anime.synopsis }}
+              dangerouslySetInnerHTML={{ __html: sanitizedSynopsis }}
             />
 
             {/* ---- review section (only when in watchlist) ---- */}

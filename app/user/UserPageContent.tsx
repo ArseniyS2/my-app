@@ -269,6 +269,7 @@ export default function UserPageContent({
   const [statsLoading, setStatsLoading] = useState(true);
 
   /* ---- Security state ---- */
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [pwError, setPwError] = useState<string | null>(null);
@@ -305,6 +306,11 @@ export default function UserPageContent({
     setPwError(null);
     setPwSuccess(false);
 
+    if (!currentPassword) {
+      setPwError("Current password is required");
+      return;
+    }
+
     const validationError = validatePassword(newPassword);
     if (validationError) {
       setPwError(validationError);
@@ -321,13 +327,14 @@ export default function UserPageContent({
       const res = await fetch("/api/user/password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: newPassword }),
+        body: JSON.stringify({ currentPassword, password: newPassword }),
       });
       const data = await res.json();
       if (!res.ok) {
         setPwError(data.error || "Failed to update password");
       } else {
         setPwSuccess(true);
+        setCurrentPassword("");
         setNewPassword("");
         setConfirmPassword("");
       }
@@ -552,6 +559,29 @@ export default function UserPageContent({
                   Change Password
                 </h3>
 
+                {/* Current password */}
+                <div className="mb-4">
+                  <label
+                    htmlFor="current-password"
+                    className="mb-1.5 block text-sm text-[#8B7FA0]"
+                  >
+                    Current password
+                  </label>
+                  <input
+                    id="current-password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={currentPassword}
+                    onChange={(e) => {
+                      setCurrentPassword(e.target.value);
+                      setPwError(null);
+                      setPwSuccess(false);
+                    }}
+                    placeholder="Enter your current password"
+                    className="w-full rounded-lg border border-[#2A2440] bg-[#13111C] px-4 py-2.5 text-sm text-[#E8E0F0] placeholder-[#6B6080] outline-none transition-colors focus:border-[#E064D6]"
+                  />
+                </div>
+
                 {/* New password */}
                 <div className="mb-4">
                   <label
@@ -563,6 +593,7 @@ export default function UserPageContent({
                   <input
                     id="new-password"
                     type="password"
+                    autoComplete="new-password"
                     value={newPassword}
                     onChange={(e) => {
                       setNewPassword(e.target.value);
@@ -672,7 +703,7 @@ export default function UserPageContent({
                 <button
                   type="button"
                   onClick={handlePasswordChange}
-                  disabled={pwLoading || !newPassword || !confirmPassword}
+                  disabled={pwLoading || !currentPassword || !newPassword || !confirmPassword}
                   className="rounded-lg bg-[#E064D6] px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-[#C850C0] hover:shadow-[0_0_16px_rgba(224,100,214,0.4)] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {pwLoading ? "Updating…" : "Update Password"}

@@ -13,6 +13,11 @@ import { eq, and, or, ilike, inArray, asc, desc, sql, type SQL } from "drizzle-o
 
 const MAX_LIMIT = 40;
 
+/** Escape LIKE/ILIKE special characters to prevent pattern injection. */
+function escapeLikePattern(s: string): string {
+  return s.replace(/[%_\\]/g, "\\$&");
+}
+
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
@@ -83,12 +88,13 @@ async function handleUserAnime(
     conditions.push(inArray(userRating.id, genreSub));
   }
 
-  /* title search */
+  /* title search (escape LIKE wildcards to prevent pattern injection) */
   if (search) {
+    const escaped = escapeLikePattern(search);
     conditions.push(
       or(
-        ilike(allAnime.titleEnglish, `%${search}%`),
-        ilike(allAnime.titleRomaji, `%${search}%`)
+        ilike(allAnime.titleEnglish, `%${escaped}%`),
+        ilike(allAnime.titleRomaji, `%${escaped}%`)
       )
     );
   }
@@ -174,10 +180,11 @@ async function handleAllAnime(
   }
 
   if (search) {
+    const escaped = escapeLikePattern(search);
     conditions.push(
       or(
-        ilike(allAnime.titleEnglish, `%${search}%`),
-        ilike(allAnime.titleRomaji, `%${search}%`)
+        ilike(allAnime.titleEnglish, `%${escaped}%`),
+        ilike(allAnime.titleRomaji, `%${escaped}%`)
       )
     );
   }

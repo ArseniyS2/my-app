@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { rateLimit } from "@/lib/rate-limit";
 import { db, users } from "@/src/db";
 import { eq } from "drizzle-orm";
 
@@ -8,10 +9,30 @@ export async function POST(req: Request) {
   if (!session)
     return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { password } = await req.json();
+  // Rate limit: 5 password change attempts per 15 minutes per user
+  const rl = rateLimit(`pw:${session.user.id}`, 5, 15 * 60_000);
+  if (!rl.allowed) {
+    return Response.json(
+      { error: "Too many attempts. Please try again later." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) },
+      }
+    );
+  }
+
+  const { currentPassword, password } = await req.json();
+
+  // Require current password for verification
+  if (!currentPassword || typeof currentPassword !== "string") {
+    return Response.json(
+      { error: "Current password is required" },
+      { status: 400 }
+    );
+  }
 
   if (!password || typeof password !== "string") {
-    return Response.json({ error: "Password is required" }, { status: 400 });
+    return Response.json({ error: "New password is required" }, { status: 400 });
   }
 
   if (password.length < 12) {
@@ -35,7 +56,26 @@ export async function POST(req: Request) {
     );
   }
 
-  // Hash password using Bun's built-in argon2id hashing
+  // Verify current password before allowing change
+  const [user] = await db
+    .select({ hashedPassword: users.hashedPassword })
+    .from(users)
+    .where(eq(users.id, session.user.id))
+    .limit(1);
+
+  if (!user?.hashedPassword) {
+    return Response.json({ error: "User not found" }, { status: 404 });
+  }
+
+  const valid = await Bun.password.verify(currentPassword, user.hashedPassword);
+  if (!valid) {
+    return Response.json(
+      { error: "Current password is incorrect" },
+      { status: 403 }
+    );
+  }
+
+  // Hash new password using Bun's built-in argon2id hashing
   const hashedPassword = await Bun.password.hash(password);
 
   await db

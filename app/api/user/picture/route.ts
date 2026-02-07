@@ -17,11 +17,19 @@ export async function POST(req: Request) {
     );
   }
 
-  // Validate URL format
+  // Validate URL format and restrict to HTTPS
+  let parsed: URL;
   try {
-    new URL(pictureUrl);
+    parsed = new URL(pictureUrl);
   } catch {
     return Response.json({ error: "Invalid URL format" }, { status: 400 });
+  }
+
+  if (parsed.protocol !== "https:") {
+    return Response.json(
+      { error: "Only HTTPS URLs are allowed" },
+      { status: 400 }
+    );
   }
 
   await db

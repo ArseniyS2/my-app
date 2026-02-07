@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { rateLimit } from "@/lib/rate-limit";
 import { db } from "@/src/db";
 import {
   allAnime,
@@ -54,6 +55,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const userId = session.user.id;
+
+  // Rate limit: 10 recommendation requests per 5 minutes per user
+  const rl = rateLimit(`recommend:${userId}`, 10, 5 * 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) },
+      }
+    );
+  }
 
   let body: RecommendRequest;
   try {
@@ -211,10 +224,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Resolve genre/tag IDs for filtering
-    let excludeGenreIds: number[] = [];
-    let includeGenreIds: number[] = [];
-    let excludeTagIds: number[] = [];
-    let includeTagIds: number[] = [];
+    const excludeGenreIds: number[] = [];
+    const includeGenreIds: number[] = [];
+    const excludeTagIds: number[] = [];
+    const includeTagIds: number[] = [];
 
     const [genreRows, tagRows] = await Promise.all([
       (includeGenres.length > 0 || excludeGenres.length > 0)
@@ -574,59 +587,59 @@ async function buildCandidateQuery(
   includeTagIds: number[],
   candidateK: number
 ): Promise<{ id: number; similarity: number }[]> {
-  // Build WHERE conditions
-  const conditions: string[] = [];
+  // Build parameterised WHERE conditions using Drizzle's sql`` tag
+  const conditions: ReturnType<typeof sql>[] = [];
 
   // Exclude specific anime IDs (seeds + watched)
   if (excludeIds.length > 0) {
     conditions.push(
-      `ae.id NOT IN (${excludeIds.join(",")})`
+      sql`ae.id NOT IN (${sql.join(excludeIds.map((id) => sql`${id}`), sql`, `)})`
     );
   }
 
   // Exclude anime with certain genres
   if (excludeGenreIds.length > 0) {
     conditions.push(
-      `ae.id NOT IN (SELECT all_anime_id FROM anime_genres WHERE genre_id IN (${excludeGenreIds.join(",")}))`
+      sql`ae.id NOT IN (SELECT all_anime_id FROM anime_genres WHERE genre_id IN (${sql.join(excludeGenreIds.map((id) => sql`${id}`), sql`, `)}))`
     );
   }
 
   // Include anime with at least one of the included genres
   if (includeGenreIds.length > 0) {
     conditions.push(
-      `ae.id IN (SELECT all_anime_id FROM anime_genres WHERE genre_id IN (${includeGenreIds.join(",")}))`
+      sql`ae.id IN (SELECT all_anime_id FROM anime_genres WHERE genre_id IN (${sql.join(includeGenreIds.map((id) => sql`${id}`), sql`, `)}))`
     );
   }
 
   // Exclude anime with certain tags
   if (excludeTagIds.length > 0) {
     conditions.push(
-      `ae.id NOT IN (SELECT anime_id FROM anime_tags WHERE tag_id IN (${excludeTagIds.join(",")}))`
+      sql`ae.id NOT IN (SELECT anime_id FROM anime_tags WHERE tag_id IN (${sql.join(excludeTagIds.map((id) => sql`${id}`), sql`, `)}))`
     );
   }
 
   // Include anime with at least one of the included tags
   if (includeTagIds.length > 0) {
     conditions.push(
-      `ae.id IN (SELECT anime_id FROM anime_tags WHERE tag_id IN (${includeTagIds.join(",")}))`
+      sql`ae.id IN (SELECT anime_id FROM anime_tags WHERE tag_id IN (${sql.join(includeTagIds.map((id) => sql`${id}`), sql`, `)}))`
     );
   }
 
   const whereClause = conditions.length > 0
-    ? `WHERE ${conditions.join(" AND ")}`
-    : "";
+    ? sql`WHERE ${sql.join(conditions, sql` AND `)}`
+    : sql``;
 
   // Use cosine distance operator (<=>) for halfvec
   // 1 - cosine_distance = cosine_similarity
-  const result = await db.execute(sql.raw(`
+  const result = await db.execute(sql`
     SELECT
       ae.id,
-      1 - (ae.embedding <=> '${queryVecStr}'::halfvec(3920)) AS similarity
+      1 - (ae.embedding <=> ${queryVecStr}::halfvec(3920)) AS similarity
     FROM anime_embeddings ae
     ${whereClause}
-    ORDER BY ae.embedding <=> '${queryVecStr}'::halfvec(3920)
+    ORDER BY ae.embedding <=> ${queryVecStr}::halfvec(3920)
     LIMIT ${candidateK}
-  `));
+  `);
 
   return (result.rows as { id: number; similarity: number }[]).map((r) => ({
     id: Number(r.id),
