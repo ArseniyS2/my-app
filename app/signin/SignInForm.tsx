@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+
+const emptySubscribe = () => () => {};
 
 export default function SignInForm({
   callbackUrl,
@@ -12,6 +14,7 @@ export default function SignInForm({
   error?: string;
 }) {
   const router = useRouter();
+  const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(initialError ?? "");
@@ -47,11 +50,36 @@ export default function SignInForm({
     }
   }
 
+  /* ---- SSR placeholder (no <input>s for Dashlane to inject into) ---- */
+  if (!isClient) {
+    return (
+      <div className="space-y-8">
+        <div className="relative border-b border-white/90 pt-1 pb-1">
+          <span className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 text-base text-zinc-600">
+            Username
+          </span>
+          <div className="pt-3 pb-2">&nbsp;</div>
+        </div>
+        <div className="relative border-b border-white/90 pt-1 pb-1">
+          <span className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 text-base text-zinc-600">
+            Password
+          </span>
+          <div className="pt-3 pb-2">&nbsp;</div>
+        </div>
+        <div
+          className="w-full rounded-3xl px-5 py-3.5 text-center text-sm font-semibold text-white shadow-lg"
+          style={{ backgroundColor: "#E064D6" }}
+        >
+          Login
+        </div>
+      </div>
+    );
+  }
+
   return (
     <form
       onSubmit={handleSubmit}
       className="space-y-8"
-      suppressHydrationWarning
     >
       {error && (
         <div

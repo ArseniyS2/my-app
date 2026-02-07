@@ -21,7 +21,7 @@ export default async function SignInPage({
       {/* Full-screen background image */}
       <div className="absolute inset-0 z-0">
         <Image
-          src="/authBG.png"
+          src="/sign-in-BG.png"
           alt=""
           fill
           priority

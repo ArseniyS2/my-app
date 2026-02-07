@@ -10,6 +10,7 @@ import {
   animeGenres,
   animeTags,
   tags,
+  users,
 } from "@/src/db/schema";
 import { eq, and, inArray, asc } from "drizzle-orm";
 import AnimeDetailContent from "./AnimeDetailContent";
@@ -131,6 +132,16 @@ export default async function AnimeDetailPage({
   }
 
   /* ---------------------------------------------------------------- */
+  /*  6. User picture                                                  */
+  /* ---------------------------------------------------------------- */
+
+  const [userRow] = await db
+    .select({ userPicture: users.userPicture })
+    .from(users)
+    .where(eq(users.id, session.user.id))
+    .limit(1);
+
+  /* ---------------------------------------------------------------- */
   /*  Serialise & render                                               */
   /* ---------------------------------------------------------------- */
 
@@ -169,6 +180,7 @@ export default async function AnimeDetailPage({
       defaultGenres={defaultGenres}
       allGenres={allGenres}
       username={session.user.username}
+      userPicture={userRow?.userPicture ?? null}
     />
   );
 }

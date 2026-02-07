@@ -118,6 +118,7 @@ export default function AnimeDetailContent({
   defaultGenres,
   allGenres,
   username,
+  userPicture,
 }: {
   anime: AnimeData;
   userRating: UserRatingData | null;
@@ -127,6 +128,7 @@ export default function AnimeDetailContent({
   defaultGenres: GenreInfo[];
   allGenres: AvailableGenre[];
   username: string;
+  userPicture: string | null;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -293,8 +295,21 @@ export default function AnimeDetailContent({
           >
             Kizuna
           </Link>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-[#8B7FA0]">{username}</span>
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Link href="/user" className="flex items-center gap-2 group">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={userPicture || "/user_picture.png"}
+                alt={username}
+                className="h-8 w-8 rounded-full border border-[#2A2440] object-cover transition-all group-hover:border-[#E064D6]"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "/user_picture.png";
+                }}
+              />
+              <span className="hidden sm:inline text-sm text-[#8B7FA0] transition-colors group-hover:text-[#E064D6]">
+                {username}
+              </span>
+            </Link>
             <SignOutButton />
           </div>
         </div>
