@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import SignOutButton from "./SignOutButton";
+import { useRecommendStore, type RecommendedAnime } from "./recommend-store";
 
 /* ------------------------------------------------------------------ */
 /*  Constants & types                                                  */
@@ -361,6 +363,10 @@ export default function DashboardContent({
   /*  Render                                                           */
   /* ================================================================ */
 
+  /* ---------- recommendation store ---------- */
+  const { mode, results: recommendations, loading: recLoading, error: recError, clearRecommendations } =
+    useRecommendStore();
+
   return (
     <div className="min-h-screen bg-[#0D0B14] text-[#E8E0F0]">
       {/* ---- header ---- */}
@@ -370,6 +376,12 @@ export default function DashboardContent({
             Kizuna
           </span>
           <div className="flex items-center gap-4">
+            <Link
+              href="/dashboard/recommend"
+              className="rounded-full border border-[#E064D6] px-4 py-1.5 text-sm font-medium text-[#E064D6] transition-all hover:bg-[#E064D6] hover:text-white hover:shadow-[0_0_14px_rgba(224,100,214,0.35)]"
+            >
+              Recommend me
+            </Link>
             <span className="text-sm text-[#8B7FA0]">{username}</span>
             <SignOutButton />
           </div>
@@ -377,6 +389,20 @@ export default function DashboardContent({
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-6">
+        {/* ============ Recommendation Results ============ */}
+        {mode === "recommendations" && (
+          <RecommendationResults
+            recommendations={recommendations}
+            loading={recLoading}
+            error={recError}
+            onClear={clearRecommendations}
+            router={router}
+          />
+        )}
+
+        {/* ============ Library Mode ============ */}
+        {mode === "library" && (
+        <>
         {/* ---- genre chips ---- */}
         <div className="mb-5 flex flex-wrap gap-2">
           {GENRES.map((g) => (
@@ -547,7 +573,140 @@ export default function DashboardContent({
             )}
           </div>
         )}
+        </>
+        )}
       </main>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Recommendation Results Component                                    */
+/* ------------------------------------------------------------------ */
+
+function RecommendationResults({
+  recommendations,
+  loading,
+  error,
+  onClear,
+  router,
+}: {
+  recommendations: RecommendedAnime[];
+  loading: boolean;
+  error: string | null;
+  onClear: () => void;
+  router: ReturnType<typeof useRouter>;
+}) {
+  return (
+    <div>
+      {/* header bar */}
+      <div className="mb-5 flex items-center justify-between">
+        <h2 className="text-xl font-bold">Recommendations</h2>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/dashboard/recommend"
+            className="rounded-lg border border-[#2A2440] px-3 py-1.5 text-sm text-[#8B7FA0] transition-colors hover:border-[#3D3560] hover:text-[#E8E0F0]"
+          >
+            Edit request
+          </Link>
+          <button
+            onClick={onClear}
+            className="rounded-lg border border-[#2A2440] px-3 py-1.5 text-sm text-[#8B7FA0] transition-colors hover:border-[#3D3560] hover:text-[#E8E0F0]"
+          >
+            Back to library
+          </button>
+        </div>
+      </div>
+
+      {/* loading state */}
+      {loading && (
+        <div className="flex flex-col items-center justify-center py-16 gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#E064D6] border-t-transparent" />
+          <p className="text-sm text-[#8B7FA0]">Finding anime for you…</p>
+        </div>
+      )}
+
+      {/* error state */}
+      {error && (
+        <div className="rounded-xl border border-[#5A2832] bg-[#3A1820]/40 p-4 text-sm text-[#E06B7A]">
+          {error}
+        </div>
+      )}
+
+      {/* results */}
+      {!loading && !error && recommendations.length === 0 && (
+        <p className="py-16 text-center text-[#8B7FA0]">
+          No recommendations found. Try adjusting your filters.
+        </p>
+      )}
+
+      {!loading && recommendations.length > 0 && (
+        <div>
+          {recommendations.map((anime, idx) => (
+            <div
+              key={anime.id}
+              onClick={() => router.push(`/dashboard/${anime.id}`)}
+              className="group mb-2 flex cursor-pointer items-center gap-4 rounded-xl border border-[#2A2440]/60 bg-[#1A1625] p-3 transition-all duration-200 hover:scale-[1.015] hover:border-[#E064D6]/40 hover:bg-[#241E3A] hover:shadow-[0_4px_24px_rgba(224,100,214,0.12)]"
+            >
+              {/* rank */}
+              <span className="w-6 flex-shrink-0 text-center text-sm font-bold text-[#8B7FA0]">
+                {idx + 1}
+              </span>
+
+              {/* cover image */}
+              <div className="relative h-[88px] w-16 flex-shrink-0 overflow-hidden rounded-lg bg-[#2A2440]">
+                {anime.coverUrl && (
+                  <Image
+                    src={anime.coverUrl}
+                    alt={anime.title}
+                    fill
+                    sizes="64px"
+                    className="object-cover"
+                  />
+                )}
+              </div>
+
+              {/* title + direct hit */}
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium transition-colors group-hover:text-[#E064D6]">
+                  {anime.title}
+                </p>
+                {/* direct hit indicator (when the reranker matched a different season) */}
+                {anime.directHit.title && (
+                  <p className="mt-0.5 truncate text-xs text-[#A78BFA]">
+                    ↳ matched: {anime.directHit.title}
+                  </p>
+                )}
+                {/* tags preview */}
+                {anime.tags.length > 0 && (
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {anime.tags.slice(0, 4).map((t) => (
+                      <span
+                        key={t}
+                        className="rounded-full bg-[#28223E] px-2 py-0.5 text-[10px] text-[#8B7FA0]"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* score */}
+              <p className="w-16 flex-shrink-0 text-center text-sm font-semibold text-[#E064D6]">
+                {(anime.score * 100).toFixed(0)}%
+              </p>
+
+              {/* genres */}
+              <div className="w-44 flex-shrink-0 text-right text-sm leading-snug">
+                <span className="text-[#8B7FA0]">
+                  {anime.genres.slice(0, 3).join(", ")}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
