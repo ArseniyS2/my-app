@@ -1,36 +1,115 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Kizuna
 
-## Getting Started
+**Your anime watchlist, together.**
 
-First, run the development server:
+A Next.js app for managing your anime library and getting personalized recommendations via vector similarity and reranking.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Stack
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Runtime & package manager:** [Bun](https://bun.sh)
+- **Framework:** [Next.js](https://nextjs.org) 16 (App Router)
+- **Database:** [Neon](https://neon.tech) (Postgres) with [Drizzle ORM](https://orm.drizzle.team)
+- **Auth:** [NextAuth.js](https://next-auth.js.org) v4 (credentials, JWT session)
+- **Vector search:** [pgvector](https://github.com/pgvector/pgvector) (halfvec, HNSW index)
+- **Styling:** [Tailwind CSS](https://tailwindcss.com) v4
+- **State:** [Zustand](https://zustand-demo.pmnd.rs) (e.g. recommendation drawer)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Features
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Auth:** Sign in with username/password; session in encrypted JWT cookie
+- **Dashboard:** Browse anime, manage ratings and status (Completed, On hold, Dropped, Planning)
+- **User profile:** Edit profile picture and password
+- **Recommendations:** Seed-based + genre/tag filters; vector similarity (K=200) then optional [Qwen3-Reranker-8B](https://deepinfra.com) rerank; see [RECOMMENDATION.md](./RECOMMENDATION.md) for the full pipeline and API
 
-## Learn More
+## Prerequisites
 
-To learn more about Next.js, take a look at the following resources:
+- [Bun](https://bun.sh) installed
+- Neon (or any Postgres with pgvector) database
+- Optional: [DeepInfra](https://deepinfra.com) API key for reranker (recommendations fall back to vector order if missing)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Getting started
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **Clone and install**
 
-## Deploy on Vercel
+   ```bash
+   bun install
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+2. **Environment variables**
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+   Create `.env.local` in the project root:
+
+   ```env
+   DATABASE_URL=postgresql://...   # Neon or Postgres connection string (required)
+   NEXTAUTH_SECRET=...             # Random string for JWT signing (required)
+   DEEPINFRA_API_KEY=...           # Optional; for recommendation reranker
+   ```
+
+   For local dev, generate a secret with e.g. `openssl rand -base64 32`.
+
+3. **Database**
+
+   ```bash
+   bun run db:generate   # Generate Drizzle migrations (if you change schema)
+   bun run db:migrate    # Apply migrations (loads .env.local)
+   bun run db:seed       # Create demo user
+   ```
+
+4. **Run the app**
+
+   ```bash
+   bun run dev
+   ```
+
+   Open [http://localhost:3000](http://localhost:3000). Sign in with **demo** / **demo1234** after seeding.
+
+## Data import (optional)
+
+To populate anime and recommendations you need to run import scripts in order (and have the source data):
+
+| Script | Purpose |
+|--------|--------|
+| `bun run db:import-genres-tags` | Import genres and tags |
+| `bun run db:import-anime` | Import anime catalog |
+| `bun run db:import-cover-images` | Fetch and store cover image URLs |
+| `bun run db:import-embeddings` | Import embeddings (Python; see `scripts/`) |
+| `bun run db:import-user-ratings` | Import user ratings |
+
+See `scripts/` and `src/db/` for requirements and usage. Clear scripts: `db:clear-anime-data`, `db:clear-user-ratings`.
+
+## Scripts
+
+| Command | Description |
+|--------|-------------|
+| `bun run dev` | Start Next.js dev server |
+| `bun run build` | Production build |
+| `bun run start` | Start production server |
+| `bun run lint` | Run ESLint |
+| `bun run db:generate` | Generate Drizzle migrations |
+| `bun run db:migrate` | Run migrations |
+| `bun run db:push` | Push schema with Drizzle Kit |
+| `bun run db:studio` | Open Drizzle Studio |
+| `bun run db:seed` | Seed demo user |
+
+## Project layout
+
+- `app/` — Next.js App Router: pages, layouts, API routes (`/api/auth`, `/api/recommend`, `/api/user`, `/api/anime`)
+- `app/dashboard/` — Dashboard UI; parallel route `@recommend` for the recommendation drawer
+- `app/signin/`, `app/user/` — Sign-in and user profile
+- `lib/` — Auth config (`auth.ts`), rate limiting (`rate-limit.ts`)
+- `src/db/` — Drizzle schema, client, migrations runner, seed and import scripts
+- `drizzle/` — SQL migrations and Drizzle Kit metadata
+- `scripts/` — Python embedding import, rating-matching script
+- `proxy.ts` — Route protection (dashboard, user, API) using NextAuth JWT
+
+## Recommendation system
+
+Recommendations use a multi-stage pipeline: seed selection → user preference vector → pgvector similarity (K=200) → optional DeepInfra rerank → post-filtering.  
+Full description, UX flow, filter behavior, and **POST /api/recommend** (and **GET /api/recommend/options**) are documented in [RECOMMENDATION.md](./RECOMMENDATION.md).
+
+## Learn more
+
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Drizzle ORM](https://orm.drizzle.team)
+- [NextAuth.js](https://next-auth.js.org)
+- [Bun](https://bun.sh/docs)
