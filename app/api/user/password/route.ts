@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import argon2 from "argon2";
 import { rateLimit } from "@/lib/rate-limit";
 import { db, users } from "@/src/db";
 import { eq } from "drizzle-orm";
@@ -67,7 +68,7 @@ export async function POST(req: Request) {
     return Response.json({ error: "User not found" }, { status: 404 });
   }
 
-  const valid = await Bun.password.verify(currentPassword, user.hashedPassword);
+  const valid = await argon2.verify(user.hashedPassword, currentPassword);
   if (!valid) {
     return Response.json(
       { error: "Current password is incorrect" },
@@ -75,8 +76,8 @@ export async function POST(req: Request) {
     );
   }
 
-  // Hash new password using Bun's built-in argon2id hashing
-  const hashedPassword = await Bun.password.hash(password);
+  // Hash new password using argon2id
+  const hashedPassword = await argon2.hash(password, { type: argon2.argon2id });
 
   await db
     .update(users)

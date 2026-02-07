@@ -1,5 +1,6 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import argon2 from "argon2";
 import { eq, or } from "drizzle-orm";
 import { db, users } from "@/src/db";
 
@@ -27,9 +28,9 @@ export const authOptions: NextAuthOptions = {
 
         if (!user?.hashedPassword) return null;
 
-        const valid = await Bun.password.verify(
-          credentials.password,
-          user.hashedPassword
+        const valid = await argon2.verify(
+          user.hashedPassword,
+          credentials.password
         );
         if (!valid) return null;
 

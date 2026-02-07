@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
+    "argon2": "^0.44.0",
     "drizzle-orm": "^0.45.1",
     "isomorphic-dompurify": "^3.0.0-rc.2",
     "my-app": ".",
@@ -49,6 +50,7 @@
     "unrs-resolver"
   ],
   "trustedDependencies": [
+    "argon2",
     "sharp",
     "unrs-resolver"
   ]
