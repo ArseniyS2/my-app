@@ -309,10 +309,10 @@ export default function AnimeDetailContent({
           &larr; Back to dashboard
         </Link>
 
-        {/* ---- 3-column grid ---- */}
-        <div className="mt-6 grid grid-cols-[180px_1fr_280px] gap-8">
+        {/* ---- responsive grid ---- */}
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-[180px_1fr] lg:grid-cols-[180px_1fr_280px] gap-6 lg:gap-8">
           {/* ============ LEFT: cover + status ============ */}
-          <div className="flex flex-col items-center gap-4">
+          <div className="flex flex-col items-center gap-4 mx-auto md:mx-0">
             {/* cover (use large image when available) */}
             <div className="relative h-[260px] w-[180px] overflow-hidden rounded-xl bg-[#2A2440] shadow-lg">
               <Image
@@ -326,7 +326,7 @@ export default function AnimeDetailContent({
             </div>
 
             {/* status / add-to-watchlist button */}
-            <div ref={statusRef} className="relative w-full">
+            <div ref={statusRef} className="relative w-[180px]">
               {currentRating ? (
                 <button
                   onClick={() => setStatusOpen((o) => !o)}
@@ -394,8 +394,8 @@ export default function AnimeDetailContent({
           {/* ============ CENTER: title, synopsis, review, franchise ============ */}
           <div className="min-w-0">
             {/* title + score */}
-            <div className="flex items-baseline gap-4">
-              <h1 className="text-3xl font-bold leading-tight">
+            <div className="flex flex-wrap items-baseline gap-2 sm:gap-4">
+              <h1 className="text-2xl sm:text-3xl font-bold leading-tight">
                 {anime.titleEnglish}
               </h1>
 
@@ -519,7 +519,7 @@ export default function AnimeDetailContent({
                     <Link
                       key={f.id}
                       href={`/dashboard/${f.id}`}
-                      className="group flex w-[300px] items-center gap-3 rounded-xl border border-[#2A2440]/60 bg-[#1A1625] p-3 transition-all hover:border-[#E064D6]/40 hover:bg-[#241E3A] hover:shadow-[0_4px_24px_rgba(224,100,214,0.12)]"
+                      className="group flex w-full sm:w-[300px] items-center gap-3 rounded-xl border border-[#2A2440]/60 bg-[#1A1625] p-3 transition-all hover:border-[#E064D6]/40 hover:bg-[#241E3A] hover:shadow-[0_4px_24px_rgba(224,100,214,0.12)]"
                     >
                       <div className="relative h-[72px] w-[52px] flex-shrink-0 overflow-hidden rounded-lg bg-[#2A2440]">
                         <Image
@@ -541,7 +541,7 @@ export default function AnimeDetailContent({
           </div>
 
           {/* ============ RIGHT: info sidebar ============ */}
-          <div className="h-fit rounded-xl border border-[#2A2440] bg-[#1A1625] p-5">
+          <div className="h-fit rounded-xl border border-[#2A2440] bg-[#1A1625] p-5 md:col-span-2 lg:col-span-1">
             <div className="space-y-4">
               <div>
                 <h4 className="text-sm font-bold text-[#E064D6]">

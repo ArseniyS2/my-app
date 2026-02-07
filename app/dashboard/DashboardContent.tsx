@@ -27,6 +27,20 @@ const PAGE_SIZE = 20;
 const MAX_DISPLAY = 40;
 const ESTIMATED_ROW_H = 112; // px – for top spacer estimation
 
+const STATUS_COLORS: Record<string, string> = {
+  COMPLETED: "#4ABED8",
+  DROPPED: "#E06B7A",
+  PLANNING: "#A78BFA",
+  ON_HOLD: "#E88FC4",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  COMPLETED: "Completed",
+  DROPPED: "Dropped",
+  PLANNING: "Planning",
+  ON_HOLD: "On Hold",
+};
+
 interface GenreInfo {
   name: string;
   role: "PRIMARY" | "SECONDARY" | null;
@@ -86,6 +100,7 @@ function CustomDropdown<T extends string>({
             ? "border-[#E064D6]"
             : "border-[#2A2440] hover:border-[#3D3560]"
         }`}
+        suppressHydrationWarning
       >
         {selected?.label}
         <svg
@@ -340,21 +355,6 @@ export default function DashboardContent({
   const topSpacerH = displayStart * ESTIMATED_ROW_H;
 
   /* ---------- formatting helpers ---------- */
-  const statusLabel = (s: string | null) => {
-    switch (s) {
-      case "COMPLETED":
-        return "C";
-      case "DROPPED":
-        return "D";
-      case "PLANNING":
-        return "P";
-      case "ON_HOLD":
-        return "H";
-      default:
-        return "";
-    }
-  };
-
   const fmtRating = (r: number | null) => {
     if (r === null || r === undefined) return "—";
     if (source === "all") return `${(r / 10).toFixed(1)}/10`;
@@ -377,10 +377,10 @@ export default function DashboardContent({
           <span className="text-lg font-semibold tracking-tight">
             Kizuna
           </span>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <Link
               href="/dashboard/recommend"
-              className="rounded-full border border-[#E064D6] px-4 py-1.5 text-sm font-medium text-[#E064D6] transition-all hover:bg-[#E064D6] hover:text-white hover:shadow-[0_0_14px_rgba(224,100,214,0.35)]"
+              className="rounded-full border border-[#E064D6] px-3 sm:px-4 py-1.5 text-sm font-medium text-[#E064D6] transition-all hover:bg-[#E064D6] hover:text-white hover:shadow-[0_0_14px_rgba(224,100,214,0.35)]"
             >
               Recommend me
             </Link>
@@ -394,7 +394,7 @@ export default function DashboardContent({
                   (e.target as HTMLImageElement).src = "/user_picture.png";
                 }}
               />
-              <span className="text-sm text-[#8B7FA0] transition-colors group-hover:text-[#E064D6]">
+              <span className="hidden sm:inline text-sm text-[#8B7FA0] transition-colors group-hover:text-[#E064D6]">
                 {username}
               </span>
             </Link>
@@ -436,9 +436,9 @@ export default function DashboardContent({
         </div>
 
         {/* ---- search bar + dropdowns ---- */}
-        <div className="mb-6 flex flex-wrap gap-3">
+        <div className="mb-6 flex flex-wrap gap-3" suppressHydrationWarning>
           {/* search */}
-          <div className="relative min-w-[200px] flex-1">
+          <div className="relative min-w-[180px] flex-1">
             <svg
               className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8B7FA0]"
               fill="none"
@@ -458,6 +458,7 @@ export default function DashboardContent({
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search"
               className="w-full rounded-lg border border-[#2A2440] bg-[#1A1625] py-2 pl-10 pr-4 text-sm text-[#E8E0F0] placeholder-[#6B6080] outline-none transition-colors focus:border-[#E064D6]"
+              suppressHydrationWarning
             />
           </div>
 
@@ -516,16 +517,16 @@ export default function DashboardContent({
                 onClick={() =>
                   router.push(`/dashboard/${anime.id}`)
                 }
-                className="group mb-2 flex cursor-pointer items-center gap-4 rounded-xl border border-[#2A2440]/60 bg-[#1A1625] p-3 transition-all duration-200 hover:scale-[1.015] hover:border-[#E064D6]/40 hover:bg-[#241E3A] hover:shadow-[0_4px_24px_rgba(224,100,214,0.12)]"
+                className="group mb-2 flex cursor-pointer items-center gap-3 sm:gap-4 rounded-xl border border-[#2A2440]/60 bg-[#1A1625] p-3 transition-all duration-200 hover:scale-[1.015] hover:border-[#E064D6]/40 hover:bg-[#241E3A] hover:shadow-[0_4px_24px_rgba(224,100,214,0.12)]"
               >
                 {/* cover image */}
-                <div className="relative h-[88px] w-16 flex-shrink-0 overflow-hidden rounded-lg bg-[#2A2440]">
+                <div className="relative h-[72px] w-12 sm:h-[88px] sm:w-16 flex-shrink-0 overflow-hidden rounded-lg bg-[#2A2440]">
                   {anime.coverImage && (
                     <Image
                       src={anime.coverImage}
                       alt={anime.titleEnglish}
                       fill
-                      sizes="64px"
+                      sizes="(max-width: 640px) 48px, 64px"
                       className="object-cover"
                     />
                   )}
@@ -539,13 +540,13 @@ export default function DashboardContent({
                 </div>
 
                 {/* rating */}
-                <p className="w-20 flex-shrink-0 text-center text-lg font-bold">
+                <p className="w-16 sm:w-20 flex-shrink-0 text-center text-base sm:text-lg font-bold">
                   {fmtRating(anime.rating)}
                 </p>
 
-                {/* genres + status */}
-                <div className="w-56 flex-shrink-0 text-right text-sm leading-snug">
-                  <span>
+                {/* genres + status dot */}
+                <div className="flex items-center justify-end gap-2 flex-shrink-0 sm:w-44 md:w-56">
+                  <span className="hidden sm:inline text-right text-sm leading-snug">
                     {anime.genres.map((g, i) => (
                       <span key={`${g.name}-${i}`}>
                         {i > 0 && ", "}
@@ -562,9 +563,11 @@ export default function DashboardContent({
                     ))}
                   </span>
                   {anime.status && (
-                    <span className="ml-2 text-xs font-semibold text-[#E064D6]">
-                      {statusLabel(anime.status)}
-                    </span>
+                    <span
+                      className="inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full"
+                      style={{ backgroundColor: STATUS_COLORS[anime.status] ?? "#8B7FA0" }}
+                      title={STATUS_LABELS[anime.status] ?? anime.status}
+                    />
                   )}
                 </div>
               </div>
@@ -615,9 +618,9 @@ function RecommendationResults({
   return (
     <div>
       {/* header bar */}
-      <div className="mb-5 flex items-center justify-between">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-xl font-bold">Recommendations</h2>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link
             href="/dashboard/recommend"
             className="rounded-lg border border-[#2A2440] px-3 py-1.5 text-sm text-[#8B7FA0] transition-colors hover:border-[#3D3560] hover:text-[#E8E0F0]"
@@ -661,7 +664,7 @@ function RecommendationResults({
             <div
               key={anime.id}
               onClick={() => router.push(`/dashboard/${anime.id}`)}
-              className="group mb-2 flex cursor-pointer items-center gap-4 rounded-xl border border-[#2A2440]/60 bg-[#1A1625] p-3 transition-all duration-200 hover:scale-[1.015] hover:border-[#E064D6]/40 hover:bg-[#241E3A] hover:shadow-[0_4px_24px_rgba(224,100,214,0.12)]"
+              className="group mb-2 flex cursor-pointer items-center gap-3 sm:gap-4 rounded-xl border border-[#2A2440]/60 bg-[#1A1625] p-3 transition-all duration-200 hover:scale-[1.015] hover:border-[#E064D6]/40 hover:bg-[#241E3A] hover:shadow-[0_4px_24px_rgba(224,100,214,0.12)]"
             >
               {/* rank */}
               <span className="w-6 flex-shrink-0 text-center text-sm font-bold text-[#8B7FA0]">
@@ -669,13 +672,13 @@ function RecommendationResults({
               </span>
 
               {/* cover image */}
-              <div className="relative h-[88px] w-16 flex-shrink-0 overflow-hidden rounded-lg bg-[#2A2440]">
+              <div className="relative h-[72px] w-12 sm:h-[88px] sm:w-16 flex-shrink-0 overflow-hidden rounded-lg bg-[#2A2440]">
                 {anime.coverUrl && (
                   <Image
                     src={anime.coverUrl}
                     alt={anime.title}
                     fill
-                    sizes="64px"
+                    sizes="(max-width: 640px) 48px, 64px"
                     className="object-cover"
                   />
                 )}
@@ -694,7 +697,7 @@ function RecommendationResults({
                 )}
                 {/* tags preview */}
                 {anime.tags.length > 0 && (
-                  <div className="mt-1 flex flex-wrap gap-1">
+                  <div className="mt-1 hidden sm:flex flex-wrap gap-1">
                     {anime.tags.slice(0, 4).map((t) => (
                       <span
                         key={t}
@@ -708,12 +711,12 @@ function RecommendationResults({
               </div>
 
               {/* score */}
-              <p className="w-16 flex-shrink-0 text-center text-sm font-semibold text-[#E064D6]">
+              <p className="w-12 sm:w-16 flex-shrink-0 text-center text-sm font-semibold text-[#E064D6]">
                 {(anime.score * 100).toFixed(0)}%
               </p>
 
               {/* genres */}
-              <div className="w-44 flex-shrink-0 text-right text-sm leading-snug">
+              <div className="hidden sm:block w-44 flex-shrink-0 text-right text-sm leading-snug">
                 <span className="text-[#8B7FA0]">
                   {anime.genres.slice(0, 3).join(", ")}
                 </span>

@@ -103,13 +103,14 @@ function DonutChart({
     return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
   };
 
-  let currentAngle = 0;
-  const segments = data.map((d) => {
+  const segments = data.reduce<
+    { name: string; count: number; color: string; percentage: number; startAngle: number; endAngle: number }[]
+  >((acc, d) => {
+    const prev = acc.length > 0 ? acc[acc.length - 1].endAngle : 0;
     const angle = (d.count / total) * 360;
-    const startAngle = currentAngle;
-    currentAngle += angle;
-    return { ...d, startAngle, endAngle: currentAngle };
-  });
+    acc.push({ ...d, startAngle: prev, endAngle: prev + angle });
+    return acc;
+  }, []);
 
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
@@ -184,7 +185,7 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-sm font-medium transition-all ${
+      className={`flex md:w-full items-center gap-2 md:gap-3 rounded-lg px-3 md:px-4 py-2.5 md:py-3 text-left text-sm font-medium whitespace-nowrap transition-all ${
         active
           ? "bg-[#E064D6]/15 text-[#E064D6]"
           : "text-[#8B7FA0] hover:bg-[#1A1625] hover:text-[#C8BDD9]"
@@ -428,28 +429,30 @@ export default function UserPageContent({
       </header>
 
       {/* ---- Body ---- */}
-      <div className="mx-auto flex max-w-5xl gap-6 px-4 py-8">
+      <div className="mx-auto flex max-w-5xl flex-col md:flex-row gap-6 px-4 py-8">
         {/* ---- Sidebar ---- */}
-        <aside className="w-56 flex-shrink-0">
+        <aside className="w-full md:w-56 flex-shrink-0">
           {/* User info */}
-          <div className="mb-6 flex flex-col items-center rounded-xl border border-[#2A2440] bg-[#1A1625] p-5">
+          <div className="mb-4 md:mb-6 flex flex-row md:flex-col items-center gap-3 md:gap-0 rounded-xl border border-[#2A2440] bg-[#1A1625] p-4 md:p-5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={currentPicture || "/user_picture.png"}
               alt={username}
-              className="mb-3 h-20 w-20 rounded-full border-2 border-[#2A2440] object-cover"
+              className="h-14 w-14 md:h-20 md:w-20 md:mb-3 rounded-full border-2 border-[#2A2440] object-cover"
               onError={(e) => {
                 (e.target as HTMLImageElement).src = "/user_picture.png";
               }}
             />
-            <p className="text-sm font-semibold">{username}</p>
-            {email && (
-              <p className="mt-0.5 text-xs text-[#8B7FA0]">{email}</p>
-            )}
+            <div className="flex flex-col md:items-center">
+              <p className="text-sm font-semibold">{username}</p>
+              {email && (
+                <p className="mt-0.5 text-xs text-[#8B7FA0]">{email}</p>
+              )}
+            </div>
           </div>
 
           {/* Tabs */}
-          <nav className="flex flex-col gap-1">
+          <nav className="flex flex-row md:flex-col gap-1 overflow-x-auto">
             <TabButton
               active={activeTab === "overview"}
               onClick={() => setActiveTab("overview")}
