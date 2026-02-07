@@ -64,6 +64,13 @@
       "when": 1770479205457,
       "tag": "0008_faulty_polaris",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1770497611686,
+      "tag": "0009_gigantic_captain_stacy",
+      "breakpoints": true
     }
   ]
 }

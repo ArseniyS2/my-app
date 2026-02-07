@@ -20,6 +20,7 @@ export const users = pgTable("users", {
   email: text("email").unique(),
   hashedPassword: text("hashed_password"),
   role: text("role").notNull().default("user"),
+  userPicture: text("user_picture"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

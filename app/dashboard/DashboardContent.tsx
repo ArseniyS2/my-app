@@ -136,8 +136,10 @@ function CustomDropdown<T extends string>({
 
 export default function DashboardContent({
   username,
+  userPicture,
 }: {
   username: string;
+  userPicture: string | null;
 }) {
   const router = useRouter();
 
@@ -382,7 +384,20 @@ export default function DashboardContent({
             >
               Recommend me
             </Link>
-            <span className="text-sm text-[#8B7FA0]">{username}</span>
+            <Link href="/user" className="flex items-center gap-2 group">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={userPicture || "/user_picture.png"}
+                alt={username}
+                className="h-8 w-8 rounded-full border border-[#2A2440] object-cover transition-all group-hover:border-[#E064D6]"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "/user_picture.png";
+                }}
+              />
+              <span className="text-sm text-[#8B7FA0] transition-colors group-hover:text-[#E064D6]">
+                {username}
+              </span>
+            </Link>
             <SignOutButton />
           </div>
         </div>
