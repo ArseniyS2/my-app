@@ -10,7 +10,7 @@ export default async function SignInPage({
   searchParams: Promise<{ callbackUrl?: string; error?: string }>;
 }) {
   const session = await getServerSession(authOptions);
-  if (session) redirect("/dashboard");
+  if (session?.user?.id) redirect("/dashboard");
 
   const params = await searchParams;
   const callbackUrl = params.callbackUrl ?? "/dashboard";

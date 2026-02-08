@@ -25,7 +25,7 @@ export default async function Home() {
         <p className="text-center text-zinc-200 drop-shadow-sm">
           Your anime watchlist, together.
         </p>
-        {session ? (
+        {session?.user?.id ? (
           <Link href="/dashboard" className={buttonClass}>
             Go to dashboard
           </Link>

@@ -64,18 +64,36 @@ export const authOptions: NextAuthOptions = {
         return token;
       }
 
-      // Legacy token (pre-migration) without a session row – create one
+      // Legacy token (pre-migration) without a session row.
+      // Multiple concurrent requests may hit this path before any of them
+      // updates the cookie, so reuse an existing active session to avoid
+      // creating duplicates.
       if (token.id && !token.sessionToken) {
-        const sessionToken = crypto.randomUUID();
-        const expiresAt = new Date(Date.now() + SESSION_MAX_AGE * 1000);
+        const [existing] = await db
+          .select({ sessionToken: sessions.sessionToken })
+          .from(sessions)
+          .where(
+            and(
+              eq(sessions.userId, token.id),
+              gt(sessions.expiresAt, new Date())
+            )
+          )
+          .limit(1);
 
-        await db.insert(sessions).values({
-          sessionToken,
-          userId: token.id,
-          expiresAt,
-        });
+        if (existing) {
+          token.sessionToken = existing.sessionToken;
+        } else {
+          const sessionToken = crypto.randomUUID();
+          const expiresAt = new Date(Date.now() + SESSION_MAX_AGE * 1000);
 
-        token.sessionToken = sessionToken;
+          await db.insert(sessions).values({
+            sessionToken,
+            userId: token.id,
+            expiresAt,
+          });
+
+          token.sessionToken = sessionToken;
+        }
         return token;
       }
 
@@ -108,6 +126,10 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id;
         session.user.username = token.username;
         session.user.role = token.role;
+      } else {
+        // Token was invalidated (session revoked / expired) – strip user
+        // data so every getServerSession consumer sees an unauthed state.
+        return { expires: session.expires } as typeof session;
       }
       return session;
     },
