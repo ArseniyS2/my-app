@@ -146,6 +146,32 @@ export default function AnimeDetailContent({
     initialRating?.rating?.toString() ?? ""
   );
 
+  /* --- similar anime (fetched asynchronously) --- */
+  const [similarAnime, setSimilarAnime] = useState<
+    { id: number; titleEnglish: string; coverImage: string }[]
+  >([]);
+  const [similarLoading, setSimilarLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(
+      `/api/anime/similar?id=${anime.id}&franchiseId=${anime.franchiseId}`
+    )
+      .then((res) => (res.ok ? res.json() : { similar: [] }))
+      .then((data) => {
+        if (!cancelled) setSimilarAnime(data.similar ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setSimilarAnime([]);
+      })
+      .finally(() => {
+        if (!cancelled) setSimilarLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [anime.id, anime.franchiseId]);
+
   /* sanitise HTML synopsis to prevent XSS */
   const sanitizedSynopsis = useMemo(
     () =>
@@ -536,38 +562,10 @@ export default function AnimeDetailContent({
               </div>
             )}
 
-            {/* ---- franchise section ---- */}
-            {franchise.length > 0 && (
-              <div className="mt-10">
-                <h3 className="text-lg font-bold">From the same franchise:</h3>
-                <div className="mt-4 flex flex-wrap gap-4">
-                  {franchise.map((f) => (
-                    <Link
-                      key={f.id}
-                      href={`/dashboard/${f.id}`}
-                      className="group flex w-full sm:w-[300px] items-center gap-3 rounded-xl border border-[#2A2440]/60 bg-[#1A1625] p-3 transition-all hover:border-[#E064D6]/40 hover:bg-[#241E3A] hover:shadow-[0_4px_24px_rgba(224,100,214,0.12)]"
-                    >
-                      <div className="relative h-[72px] w-[52px] flex-shrink-0 overflow-hidden rounded-lg bg-[#2A2440]">
-                        <Image
-                          src={f.coverImage}
-                          alt={f.titleEnglish}
-                          fill
-                          sizes="52px"
-                          className="object-cover"
-                        />
-                      </div>
-                      <p className="text-sm font-medium transition-colors group-hover:text-[#E064D6]">
-                        {f.titleEnglish}
-                      </p>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* ============ RIGHT: info sidebar ============ */}
-          <div className="h-fit rounded-xl border border-[#2A2440] bg-[#1A1625] p-5 md:col-span-2 lg:col-span-1">
+          <div className="h-fit rounded-xl border border-[#2A2440] bg-[#1A1625] p-5 md:col-span-2 lg:col-span-1 lg:row-start-1 lg:col-start-3">
             <div className="space-y-4">
               <div>
                 <h4 className="text-sm font-bold text-[#E064D6]">
@@ -675,7 +673,7 @@ export default function AnimeDetailContent({
                         {currentRating && g.role !== null && (
                           <button
                             onClick={() => handleRemoveGenre(g.id)}
-                            className="ml-0.5 hidden h-3.5 w-3.5 items-center justify-center rounded-full text-[10px] text-[#6B6080] transition-colors hover:text-[#E06B7A] group-hover/chip:inline-flex"
+                            className="ml-0.5 hidden h-5 w-5 items-center justify-center rounded-full text-sm leading-none text-[#6B6080] transition-colors hover:bg-[#3A1820]/60 hover:text-[#E06B7A] group-hover/chip:inline-flex"
                             title="Remove genre"
                           >
                             ×
@@ -706,6 +704,77 @@ export default function AnimeDetailContent({
               )}
             </div>
           </div>
+
+          {/* ---- similar anime section (loaded async, spans full grid width) ---- */}
+          {(similarLoading || similarAnime.length > 0) && (
+            <div className="col-span-full mt-4">
+              <h3 className="text-lg font-bold">Similar anime you might like</h3>
+
+              {similarLoading ? (
+                /* skeleton placeholders */
+                <div className="mt-4 grid grid-cols-3 sm:grid-cols-5 gap-4 sm:gap-5">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="flex flex-col items-center gap-2">
+                      <div className="aspect-[3/4] w-full animate-pulse rounded-xl bg-[#2A2440]" />
+                      <div className="h-3 w-3/4 animate-pulse rounded bg-[#2A2440]" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-4 grid grid-cols-3 sm:grid-cols-5 gap-4 sm:gap-5">
+                  {similarAnime.map((s) => (
+                    <Link
+                      key={s.id}
+                      href={`/dashboard/${s.id}`}
+                      className="group flex flex-col items-center gap-2 min-w-0"
+                    >
+                      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-xl border border-[#2A2440]/60 bg-[#2A2440] shadow-md transition-all group-hover:border-[#E064D6]/50 group-hover:shadow-[0_4px_20px_rgba(224,100,214,0.18)]">
+                        <Image
+                          src={s.coverImage}
+                          alt={s.titleEnglish}
+                          fill
+                          sizes="(max-width: 640px) 30vw, 180px"
+                          className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                      </div>
+                      <p className="w-full line-clamp-2 text-center text-xs sm:text-sm font-medium leading-tight text-[#B8AEC8] transition-colors group-hover:text-[#E064D6]">
+                        {s.titleEnglish}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ---- franchise section (spans full grid width) ---- */}
+          {franchise.length > 0 && (
+            <div className="col-span-full mt-4">
+              <h3 className="text-lg font-bold">From the same franchise</h3>
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {franchise.map((f) => (
+                  <Link
+                    key={f.id}
+                    href={`/dashboard/${f.id}`}
+                    className="group flex items-center gap-3 rounded-xl border border-[#2A2440]/60 bg-[#1A1625] p-3 transition-all hover:border-[#E064D6]/40 hover:bg-[#241E3A] hover:shadow-[0_4px_24px_rgba(224,100,214,0.12)]"
+                  >
+                    <div className="relative h-[72px] w-[52px] flex-shrink-0 overflow-hidden rounded-lg bg-[#2A2440]">
+                      <Image
+                        src={f.coverImage}
+                        alt={f.titleEnglish}
+                        fill
+                        sizes="52px"
+                        className="object-cover"
+                      />
+                    </div>
+                    <p className="text-sm font-medium transition-colors group-hover:text-[#E064D6]">
+                      {f.titleEnglish}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </div>
