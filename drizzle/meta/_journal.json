@@ -78,6 +78,13 @@
       "when": 1770552938791,
       "tag": "0010_daffy_sersi",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1770558187050,
+      "tag": "0011_secret_captain_cross",
+      "breakpoints": true
     }
   ]
 }

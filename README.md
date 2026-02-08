@@ -9,16 +9,16 @@ A Next.js app for managing your anime library and getting personalized recommend
 - **Runtime & package manager:** [Bun](https://bun.sh)
 - **Framework:** [Next.js](https://nextjs.org) 16 (App Router)
 - **Database:** [Neon](https://neon.tech) (Postgres) with [Drizzle ORM](https://orm.drizzle.team)
-- **Auth:** [NextAuth.js](https://next-auth.js.org) v4 (credentials, JWT session)
+- **Auth:** [NextAuth.js](https://next-auth.js.org) v4 (credentials; sessions stored in DB, validated on each request)
 - **Vector search:** [pgvector](https://github.com/pgvector/pgvector) (halfvec, HNSW index)
 - **Styling:** [Tailwind CSS](https://tailwindcss.com) v4
 - **State:** [Zustand](https://zustand-demo.pmnd.rs) (e.g. recommendation drawer)
 
 ## Features
 
-- **Auth:** Sign in with username/password; session in encrypted JWT cookie
+- **Auth:** Sign in with username/password; sessions stored in DB, validated on each request; view active sessions and log out everywhere from profile
 - **Dashboard:** Browse anime, manage ratings and status (Completed, On hold, Dropped, Planning)
-- **User profile:** Edit profile picture and password
+- **User profile:** Edit profile picture and password; security: change password, view active sessions, log out everywhere
 - **Recommendations:** Seed-based + genre/tag filters; vector similarity (K=200) then optional [Qwen3-Reranker-8B](https://deepinfra.com) rerank; see [RECOMMENDATION.md](./RECOMMENDATION.md) for the full pipeline and API
 
 ## Prerequisites
@@ -100,7 +100,7 @@ See `scripts/` and `src/db/` for requirements and usage. Clear scripts: `db:clea
 - `src/db/` — Drizzle schema, client, migrations runner, seed and import scripts
 - `drizzle/` — SQL migrations and Drizzle Kit metadata
 - `scripts/` — Python embedding import, rating-matching script
-- `proxy.ts` — Route protection (dashboard, user, API) using NextAuth JWT
+- `proxy.ts` — Route protection (dashboard, user, API) using NextAuth with DB session validation
 
 ## Recommendation system
 

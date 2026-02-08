@@ -1,0 +1,1 @@
+CREATE INDEX "all_anime_franchise_id_idx" ON "all_anime" USING btree ("franchise_id");

@@ -44,19 +44,23 @@ export const genreRoleEnum = pgEnum("genre_role", ["PRIMARY", "SECONDARY"]);
 
 export const animeStatusEnum = pgEnum("anime_status", ["COMPLETED", "ON_HOLD", "DROPPED", "PLANNING"]);
 
-export const allAnime = pgTable("all_anime", {
-  id: serial("id").primaryKey(),
-  titleEnglish: text("title_english").notNull(),
-  titleRomaji: text("title_romaji").notNull(),
-  synopsis: text("synopsis").notNull(),
-  franchiseId: integer("franchise_id").notNull(),
-  anilistId: integer("anilist_id").notNull().unique(),
-  coverImage: text("cover_image").notNull(),
-  coverImageLarge: text("cover_image_large").notNull().default(""),
-  avgScore: integer("avg_score").notNull(),
-  episodeNumber: integer("episode_number").notNull(),
-  releaseYear: integer("release_year").notNull(),
-});
+export const allAnime = pgTable(
+  "all_anime",
+  {
+    id: serial("id").primaryKey(),
+    titleEnglish: text("title_english").notNull(),
+    titleRomaji: text("title_romaji").notNull(),
+    synopsis: text("synopsis").notNull(),
+    franchiseId: integer("franchise_id").notNull(),
+    anilistId: integer("anilist_id").notNull().unique(),
+    coverImage: text("cover_image").notNull(),
+    coverImageLarge: text("cover_image_large").notNull().default(""),
+    avgScore: integer("avg_score").notNull(),
+    episodeNumber: integer("episode_number").notNull(),
+    releaseYear: integer("release_year").notNull(),
+  },
+  (table) => [index("all_anime_franchise_id_idx").on(table.franchiseId)]
+);
 
 export const animeEmbeddings = pgTable(
   "anime_embeddings",
