@@ -1,0 +1,1 @@
+ALTER TYPE "public"."anime_status" ADD VALUE 'WATCHING';

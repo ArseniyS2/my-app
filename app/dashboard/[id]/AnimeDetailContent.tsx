@@ -60,9 +60,15 @@ interface GenreInfo {
 /*  Status colour mapping                                               */
 /* ------------------------------------------------------------------ */
 
-type StatusKey = "COMPLETED" | "DROPPED" | "PLANNING" | "ON_HOLD";
+type StatusKey = "COMPLETED" | "DROPPED" | "PLANNING" | "ON_HOLD" | "WATCHING";
 
 const STATUS_STYLES: Record<StatusKey, { bg: string; text: string; border: string; dropdownBg: string }> = {
+  WATCHING: {
+    bg: "bg-[#132D1E]",
+    text: "text-[#4ADE80]",
+    border: "border-[#1E4A30]",
+    dropdownBg: "hover:bg-[#132D1E]/60",
+  },
   COMPLETED: {
     bg: "bg-[#132F3D]",
     text: "text-[#4ABED8]",
@@ -90,13 +96,14 @@ const STATUS_STYLES: Record<StatusKey, { bg: string; text: string; border: strin
 };
 
 const STATUS_LABELS: Record<StatusKey, string> = {
+  WATCHING: "Watching",
   COMPLETED: "Completed",
   DROPPED: "Dropped",
   PLANNING: "Planning",
   ON_HOLD: "On Hold",
 };
 
-const ALL_STATUSES: StatusKey[] = ["COMPLETED", "ON_HOLD", "DROPPED", "PLANNING"];
+const ALL_STATUSES: StatusKey[] = ["WATCHING", "COMPLETED", "ON_HOLD", "DROPPED", "PLANNING"];
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                             */
@@ -233,8 +240,8 @@ export default function AnimeDetailContent({
           ? { ...prev, status }
           : { id: ratingId, rating: null, review: "", status }
       );
-      /* When first adding to watchlist, switch to empty user genres */
-      if (wasNew) setCurrentGenres([]);
+      /* When first adding to watchlist or switching to PLANNING, show default genres */
+      if (wasNew || status === "PLANNING") setCurrentGenres(defaultGenres);
       router.refresh();
     });
   };
@@ -316,6 +323,7 @@ export default function AnimeDetailContent({
   /* ------ derived ------ */
   const statusKey = currentRating?.status as StatusKey | undefined;
   const statusStyle = statusKey ? STATUS_STYLES[statusKey] : null;
+  const isPlanning = statusKey === "PLANNING";
 
   /* ================================================================ */
   /*  Render                                                           */
@@ -451,7 +459,7 @@ export default function AnimeDetailContent({
                 {anime.titleEnglish}
               </h1>
 
-              {currentRating && (
+              {currentRating && !isPlanning && (
                 <>
                   {scoreEditing ? (
                     <div className="flex items-center gap-1">
@@ -503,8 +511,8 @@ export default function AnimeDetailContent({
               dangerouslySetInnerHTML={{ __html: sanitizedSynopsis }}
             />
 
-            {/* ---- review section (only when in watchlist) ---- */}
-            {currentRating && (
+            {/* ---- review section (only when in watchlist and not PLANNING) ---- */}
+            {currentRating && !isPlanning && (
               <div className="mt-6">
                 {/* show existing review */}
                 {currentRating.review && !reviewEditing && (
@@ -604,8 +612,8 @@ export default function AnimeDetailContent({
               <div>
                 <div className="flex items-center gap-2">
                   <h4 className="text-sm font-bold text-[#E064D6]">Genres</h4>
-                  {/* "+" button – only when anime is in the watchlist */}
-                  {currentRating && (
+                  {/* "+" button – only when anime is in the watchlist and not PLANNING */}
+                  {currentRating && !isPlanning && (
                     <div ref={genrePickerRef} className="relative">
                       <button
                         onClick={() => setGenrePickerOpen((o) => !o)}
@@ -670,7 +678,7 @@ export default function AnimeDetailContent({
                         }`}
                       >
                         {g.name}
-                        {currentRating && g.role !== null && (
+                        {currentRating && !isPlanning && g.role !== null && (
                           <button
                             onClick={() => handleRemoveGenre(g.id)}
                             className="ml-0.5 hidden h-5 w-5 items-center justify-center rounded-full text-sm leading-none text-[#6B6080] transition-colors hover:bg-[#3A1820]/60 hover:text-[#E06B7A] group-hover/chip:inline-flex"

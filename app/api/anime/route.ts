@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
   const genreFilter = url.searchParams.get("genre") ?? "Overall";
   const search = (url.searchParams.get("search") ?? "").trim();
   const sort = url.searchParams.get("sort") === "desc" ? "desc" : "asc";
+  const statusFilter = url.searchParams.get("status") ?? null;
   const offset = Math.max(
     0,
     parseInt(url.searchParams.get("offset") ?? "0", 10)
@@ -46,7 +47,8 @@ export async function GET(req: NextRequest) {
         search,
         sort,
         offset,
-        limit
+        limit,
+        statusFilter
       );
     }
     return await handleAllAnime(genreFilter, search, sort, offset, limit);
@@ -68,10 +70,16 @@ async function handleUserAnime(
   search: string,
   sort: string,
   offset: number,
-  limit: number
+  limit: number,
+  statusFilter: string | null
 ) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const conditions: (SQL | undefined)[] = [eq(userRating.userId, userId)];
+
+  /* status filter */
+  if (statusFilter) {
+    conditions.push(eq(userRating.status, statusFilter as typeof userRating.status.enumValues[number]));
+  }
 
   /* genre filter — PRIMARY genre only */
   if (genreFilter !== "Overall") {
@@ -120,7 +128,11 @@ async function handleUserAnime(
     .limit(limit);
 
   /* batch-fetch genres for the returned ratings */
-  const urIds = rows.map((r) => r.userRatingId);
+  /* For non-PLANNING items: use user_rating_genre */
+  const nonPlanningRows = rows.filter((r) => r.status !== "PLANNING");
+  const planningRows = rows.filter((r) => r.status === "PLANNING");
+
+  const urIds = nonPlanningRows.map((r) => r.userRatingId);
   const genreRows =
     urIds.length > 0
       ? await db
@@ -134,10 +146,30 @@ async function handleUserAnime(
           .where(inArray(userRatingGenre.userRatingId, urIds))
       : [];
 
-  const genreMap = new Map<number, { name: string; role: string }[]>();
+  const genreMap = new Map<number, { name: string; role: string | null }[]>();
   for (const g of genreRows) {
     if (!genreMap.has(g.userRatingId)) genreMap.set(g.userRatingId, []);
     genreMap.get(g.userRatingId)!.push({ name: g.genreName, role: g.role });
+  }
+
+  /* For PLANNING items: use anime_genres (from all_anime table) */
+  const planningAnimeIds = planningRows.map((r) => r.animeId);
+  const planningGenreRows =
+    planningAnimeIds.length > 0
+      ? await db
+          .select({
+            allAnimeId: animeGenres.allAnimeId,
+            genreName: genreTable.genreName,
+          })
+          .from(animeGenres)
+          .innerJoin(genreTable, eq(animeGenres.genreId, genreTable.id))
+          .where(inArray(animeGenres.allAnimeId, planningAnimeIds))
+      : [];
+
+  const planningGenreMap = new Map<number, { name: string; role: null }[]>();
+  for (const g of planningGenreRows) {
+    if (!planningGenreMap.has(g.allAnimeId)) planningGenreMap.set(g.allAnimeId, []);
+    planningGenreMap.get(g.allAnimeId)!.push({ name: g.genreName, role: null });
   }
 
   const items = rows.map((r) => ({
@@ -145,13 +177,15 @@ async function handleUserAnime(
     titleEnglish: r.titleEnglish,
     coverImage: r.coverImage,
     rating: r.rating != null ? parseFloat(String(r.rating)) : null,
-    genres: (genreMap.get(r.userRatingId) ?? []).sort((a, b) =>
-      a.role === "PRIMARY" && b.role !== "PRIMARY"
-        ? -1
-        : a.role !== "PRIMARY" && b.role === "PRIMARY"
-          ? 1
-          : 0
-    ),
+    genres: r.status === "PLANNING"
+      ? (planningGenreMap.get(r.animeId) ?? [])
+      : (genreMap.get(r.userRatingId) ?? []).sort((a, b) =>
+          a.role === "PRIMARY" && b.role !== "PRIMARY"
+            ? -1
+            : a.role !== "PRIMARY" && b.role === "PRIMARY"
+              ? 1
+              : 0
+        ),
     status: r.status,
   }));
 

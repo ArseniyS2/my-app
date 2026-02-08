@@ -42,7 +42,7 @@ export const sessions = pgTable("sessions", {
 // Role for user_rating_genre: PRIMARY or SECONDARY
 export const genreRoleEnum = pgEnum("genre_role", ["PRIMARY", "SECONDARY"]);
 
-export const animeStatusEnum = pgEnum("anime_status", ["COMPLETED", "ON_HOLD", "DROPPED", "PLANNING"]);
+export const animeStatusEnum = pgEnum("anime_status", ["COMPLETED", "ON_HOLD", "DROPPED", "PLANNING", "WATCHING"]);
 
 export const allAnime = pgTable(
   "all_anime",

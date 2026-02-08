@@ -28,6 +28,7 @@ const MAX_DISPLAY = 40;
 const ESTIMATED_ROW_H = 112; // px – for top spacer estimation
 
 const STATUS_COLORS: Record<string, string> = {
+  WATCHING: "#4ADE80",
   COMPLETED: "#4ABED8",
   DROPPED: "#E06B7A",
   PLANNING: "#A78BFA",
@@ -35,6 +36,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const STATUS_LABELS: Record<string, string> = {
+  WATCHING: "Watching",
   COMPLETED: "Completed",
   DROPPED: "Dropped",
   PLANNING: "Planning",
@@ -163,6 +165,7 @@ export default function DashboardContent({
   const [searchQuery, setSearchQuery] = useState("");
   const [source, setSource] = useState<"user" | "all">("user");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
   /* ---------- data state ---------- */
   const [allItems, setAllItems] = useState<AnimeItem[]>([]);
@@ -218,12 +221,13 @@ export default function DashboardContent({
         limit: String(limit),
       });
       if (debouncedSearch) params.set("search", debouncedSearch);
+      if (statusFilter !== "ALL" && source === "user") params.set("status", statusFilter);
 
       const res = await fetch(`/api/anime?${params}`, { signal });
       if (!res.ok) throw new Error("fetch failed");
       return (await res.json()) as { items: AnimeItem[]; hasMore: boolean };
     },
-    [source, selectedGenre, debouncedSearch, sortOrder]
+    [source, selectedGenre, debouncedSearch, sortOrder, statusFilter]
   );
 
   /* ---------- reset on filter change ---------- */
@@ -469,8 +473,27 @@ export default function DashboardContent({
               { value: "user", label: "Your anime" },
               { value: "all", label: "All anime" },
             ]}
-            onChange={setSource}
+            onChange={(v) => {
+              setSource(v);
+              if (v === "all") setStatusFilter("ALL");
+            }}
           />
+
+          {/* status filter dropdown (only for user's anime) */}
+          {source === "user" && (
+            <CustomDropdown
+              value={statusFilter}
+              options={[
+                { value: "ALL", label: "All statuses" },
+                { value: "WATCHING", label: "Watching" },
+                { value: "COMPLETED", label: "Completed" },
+                { value: "ON_HOLD", label: "On Hold" },
+                { value: "PLANNING", label: "Planning" },
+                { value: "DROPPED", label: "Dropped" },
+              ]}
+              onChange={setStatusFilter}
+            />
+          )}
 
           {/* sort dropdown */}
           <CustomDropdown

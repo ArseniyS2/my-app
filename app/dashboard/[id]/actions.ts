@@ -50,7 +50,7 @@ async function getFranchiseRating(animeId: number, userId: string) {
 
 export async function setAnimeStatus(
   animeId: number,
-  status: "COMPLETED" | "ON_HOLD" | "DROPPED" | "PLANNING"
+  status: "COMPLETED" | "ON_HOLD" | "DROPPED" | "PLANNING" | "WATCHING"
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) throw new Error("Unauthorized");

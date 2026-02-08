@@ -104,10 +104,10 @@ export default async function AnimeDetailPage({
     role: null as "PRIMARY" | "SECONDARY" | null,
   }));
 
-  /* Active genres: user_rating_genre when in watchlist, anime_genres otherwise */
+  /* Active genres: user_rating_genre when in watchlist (except PLANNING), anime_genres otherwise */
   let genres: { id: number; name: string; role: "PRIMARY" | "SECONDARY" | null }[];
 
-  if (userRatingRow) {
+  if (userRatingRow && userRatingRow.status !== "PLANNING") {
     const rows = await db
       .select({
         genreId: userRatingGenre.genreId,

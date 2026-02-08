@@ -22,7 +22,7 @@ if (existsSync(envLocal)) {
 interface RatingEntry {
   title: string;
   rating: number | null;
-  status: "COMPLETED" | "ON_HOLD" | "DROPPED" | "PLANNING";
+  status: "COMPLETED" | "ON_HOLD" | "DROPPED" | "PLANNING" | "WATCHING";
   review: string;
   genres: {
     name: string;
