@@ -5,6 +5,12 @@ import { db } from "@/src/db";
 import { genre, tags } from "@/src/db/schema";
 import { asc } from "drizzle-orm";
 
+/**
+ * Genres that exist only for user classification (not in scraped data),
+ * so they must be excluded from the recommendation genre picker.
+ */
+const EXCLUDED_RECOMMEND_GENRES = new Set(["Tragedy", "Suspense"]);
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
@@ -18,7 +24,9 @@ export async function GET() {
     ]);
 
     return NextResponse.json({
-      genres: genreRows.map((r) => r.name),
+      genres: genreRows
+        .map((r) => r.name)
+        .filter((name) => !EXCLUDED_RECOMMEND_GENRES.has(name)),
       tags: tagRows.map((r) => r.name),
     });
   } catch (error) {

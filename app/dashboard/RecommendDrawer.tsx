@@ -24,6 +24,45 @@ interface SeedAnime {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Match-mode toggle (ANY / ALL)                                       */
+/* ------------------------------------------------------------------ */
+
+function MatchModeToggle({
+  mode,
+  onChange,
+}: {
+  mode: "any" | "all";
+  onChange: (m: "any" | "all") => void;
+}) {
+  return (
+    <div className="flex rounded-md border border-[#2A2440] bg-[#1A1625] overflow-hidden text-[10px] font-semibold uppercase tracking-wider">
+      <button
+        type="button"
+        onClick={() => onChange("any")}
+        className={`px-2 py-0.5 transition-colors ${
+          mode === "any"
+            ? "bg-[#E064D6]/20 text-[#E064D6]"
+            : "text-[#6B6080] hover:text-[#8B7FA0]"
+        }`}
+      >
+        Any
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange("all")}
+        className={`px-2 py-0.5 transition-colors ${
+          mode === "all"
+            ? "bg-[#E064D6]/20 text-[#E064D6]"
+            : "text-[#6B6080] hover:text-[#8B7FA0]"
+        }`}
+      >
+        All
+      </button>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Multi-select chip input with autocomplete                          */
 /* ------------------------------------------------------------------ */
 
@@ -61,7 +100,7 @@ function ChipInput({
 
   return (
     <div className="space-y-1.5">
-      <span className="text-xs font-semibold text-[#8B7FA0] uppercase tracking-wider">{label}</span>
+      {label && <span className="text-xs font-semibold text-[#8B7FA0] uppercase tracking-wider">{label}</span>}
       {/* chips */}
       {selected.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
@@ -137,6 +176,8 @@ export default function RecommendDrawer() {
   const [excludeGenres, setExcludeGenres] = useState<string[]>([]);
   const [includeTags, setIncludeTags] = useState<string[]>([]);
   const [excludeTags, setExcludeTags] = useState<string[]>([]);
+  const [genreMatchMode, setGenreMatchMode] = useState<"any" | "all">("any");
+  const [tagMatchMode, setTagMatchMode] = useState<"any" | "all">("any");
   const [excludeWatched, setExcludeWatched] = useState(true);
   const [freeText, setFreeText] = useState("");
 
@@ -237,9 +278,15 @@ export default function RecommendDrawer() {
         body.seedAnimeIds = selectedSeeds.map((s) => s.id);
         body.useTopRated = false;
       }
-      if (includeGenres.length > 0) body.includeGenres = includeGenres;
+      if (includeGenres.length > 0) {
+        body.includeGenres = includeGenres;
+        body.genreMatchMode = genreMatchMode;
+      }
       if (excludeGenres.length > 0) body.excludeGenres = excludeGenres;
-      if (includeTags.length > 0) body.includeTags = includeTags;
+      if (includeTags.length > 0) {
+        body.includeTags = includeTags;
+        body.tagMatchMode = tagMatchMode;
+      }
       if (excludeTags.length > 0) body.excludeTags = excludeTags;
       if (freeText.trim()) body.freeText = freeText.trim();
 
@@ -396,14 +443,22 @@ export default function RecommendDrawer() {
           <section className="space-y-4">
             <h3 className="text-sm font-bold text-[#E064D6]">Filters</h3>
 
-            <ChipInput
-              label="Include Genres"
-              options={allGenres}
-              selected={includeGenres}
-              onAdd={(v) => setIncludeGenres((p) => [...p, v])}
-              onRemove={(v) => setIncludeGenres((p) => p.filter((x) => x !== v))}
-              placeholder="Add genre to include…"
-            />
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-[#8B7FA0] uppercase tracking-wider">Include Genres</span>
+                {includeGenres.length > 1 && (
+                  <MatchModeToggle mode={genreMatchMode} onChange={setGenreMatchMode} />
+                )}
+              </div>
+              <ChipInput
+                label=""
+                options={allGenres}
+                selected={includeGenres}
+                onAdd={(v) => setIncludeGenres((p) => [...p, v])}
+                onRemove={(v) => setIncludeGenres((p) => p.filter((x) => x !== v))}
+                placeholder="Add genre to include…"
+              />
+            </div>
 
             <ChipInput
               label="Exclude Genres"
@@ -414,14 +469,22 @@ export default function RecommendDrawer() {
               placeholder="Add genre to exclude…"
             />
 
-            <ChipInput
-              label="Include Tags"
-              options={allTags}
-              selected={includeTags}
-              onAdd={(v) => setIncludeTags((p) => [...p, v])}
-              onRemove={(v) => setIncludeTags((p) => p.filter((x) => x !== v))}
-              placeholder="Add tag to include…"
-            />
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-[#8B7FA0] uppercase tracking-wider">Include Tags</span>
+                {includeTags.length > 1 && (
+                  <MatchModeToggle mode={tagMatchMode} onChange={setTagMatchMode} />
+                )}
+              </div>
+              <ChipInput
+                label=""
+                options={allTags}
+                selected={includeTags}
+                onAdd={(v) => setIncludeTags((p) => [...p, v])}
+                onRemove={(v) => setIncludeTags((p) => p.filter((x) => x !== v))}
+                placeholder="Add tag to include…"
+              />
+            </div>
 
             <ChipInput
               label="Exclude Tags"

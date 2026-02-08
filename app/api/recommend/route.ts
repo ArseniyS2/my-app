@@ -40,6 +40,10 @@ interface RecommendRequest {
   excludeGenres?: string[];
   includeTags?: string[];
   excludeTags?: string[];
+  /** "any" = at least one genre must match (default), "all" = every genre must match */
+  genreMatchMode?: "any" | "all";
+  /** "any" = at least one tag must match (default), "all" = every tag must match */
+  tagMatchMode?: "any" | "all";
   excludeWatched?: boolean;
   freeText?: string;
   limit?: number;
@@ -82,6 +86,8 @@ export async function POST(req: NextRequest) {
     excludeGenres = [],
     includeTags = [],
     excludeTags = [],
+    genreMatchMode = "any",
+    tagMatchMode = "any",
     excludeWatched = true,
     freeText = "",
     limit = DEFAULT_LIMIT,
@@ -273,7 +279,9 @@ export async function POST(req: NextRequest) {
       includeGenreIds,
       excludeTagIds,
       includeTagIds,
-      CANDIDATE_K
+      CANDIDATE_K,
+      genreMatchMode,
+      tagMatchMode
     );
 
     const candidates = await candidateQuery;
@@ -435,9 +443,21 @@ export async function POST(req: NextRequest) {
       // Hard exclude
       if (g.some((genre) => excludeGenreSet.has(genre))) continue;
       if (t.some((tag) => excludeTagSet.has(tag))) continue;
-      // Include filter
-      if (includeGenreSet.size > 0 && !g.some((genre) => includeGenreSet.has(genre))) continue;
-      if (includeTagSet.size > 0 && !t.some((tag) => includeTagSet.has(tag))) continue;
+      // Include filter — respect match mode (any vs all)
+      if (includeGenreSet.size > 0) {
+        if (genreMatchMode === "all") {
+          if (![...includeGenreSet].every((genre) => g.includes(genre))) continue;
+        } else {
+          if (!g.some((genre) => includeGenreSet.has(genre))) continue;
+        }
+      }
+      if (includeTagSet.size > 0) {
+        if (tagMatchMode === "all") {
+          if (![...includeTagSet].every((tag) => t.includes(tag))) continue;
+        } else {
+          if (!t.some((tag) => includeTagSet.has(tag))) continue;
+        }
+      }
 
       // Franchise dedup: skip if we already have a hit from this franchise
       if (seenFranchises.has(meta.franchiseId)) continue;
@@ -503,42 +523,47 @@ export async function POST(req: NextRequest) {
       franchiseGenreMap.get(fg.animeId)!.push(fg.genreName);
     }
 
-    const recommendations = franchiseHits.map((hit) => {
-      const rep = franchiseRepMap.get(hit.franchiseId);
-      const hitMeta = metaMap.get(hit.hitId);
+    /** Minimum similarity score (60%) — results below this are not shown */
+    const MIN_SCORE_THRESHOLD = 0.6;
 
-      if (rep) {
-        const hitIsRep = hit.hitId === rep.id;
+    const recommendations = franchiseHits
+      .filter((hit) => hit.score >= MIN_SCORE_THRESHOLD)
+      .map((hit) => {
+        const rep = franchiseRepMap.get(hit.franchiseId);
+        const hitMeta = metaMap.get(hit.hitId);
+
+        if (rep) {
+          const hitIsRep = hit.hitId === rep.id;
+          return {
+            // Link to the franchise representative (season 1)
+            id: rep.id,
+            title: rep.titleEnglish,
+            coverUrl: rep.coverImage,
+            score: hit.score,
+            genres: franchiseGenreMap.get(rep.id) ?? hit.genres,
+            tags: hit.tags,
+            directHit: {
+              id: hit.hitId,
+              // Only show "matched: X" when the hit is a different entry than what we display
+              title: hitIsRep ? "" : hit.hitTitle,
+            },
+          };
+        }
+
+        // No franchise entries found at all — display the direct hit itself
         return {
-          // Link to the franchise representative (season 1)
-          id: rep.id,
-          title: rep.titleEnglish,
-          coverUrl: rep.coverImage,
+          id: hit.hitId,
+          title: hit.hitTitle,
+          coverUrl: hitMeta?.coverImage ?? "",
           score: hit.score,
-          genres: franchiseGenreMap.get(rep.id) ?? hit.genres,
+          genres: hit.genres,
           tags: hit.tags,
           directHit: {
             id: hit.hitId,
-            // Only show "matched: X" when the hit is a different entry than what we display
-            title: hitIsRep ? "" : hit.hitTitle,
+            title: "",
           },
         };
-      }
-
-      // No franchise entries found at all — display the direct hit itself
-      return {
-        id: hit.hitId,
-        title: hit.hitTitle,
-        coverUrl: hitMeta?.coverImage ?? "",
-        score: hit.score,
-        genres: hit.genres,
-        tags: hit.tags,
-        directHit: {
-          id: hit.hitId,
-          title: "",
-        },
-      };
-    });
+      });
 
     return NextResponse.json({ recommendations });
   } catch (error) {
@@ -585,7 +610,9 @@ async function buildCandidateQuery(
   includeGenreIds: number[],
   excludeTagIds: number[],
   includeTagIds: number[],
-  candidateK: number
+  candidateK: number,
+  genreMatchMode: "any" | "all" = "any",
+  tagMatchMode: "any" | "all" = "any"
 ): Promise<{ id: number; similarity: number }[]> {
   // Build parameterised WHERE conditions using Drizzle's sql`` tag
   const conditions: ReturnType<typeof sql>[] = [];
@@ -604,11 +631,19 @@ async function buildCandidateQuery(
     );
   }
 
-  // Include anime with at least one of the included genres
+  // Include anime with matching genres (ANY = at least one, ALL = every specified genre)
   if (includeGenreIds.length > 0) {
-    conditions.push(
-      sql`ae.id IN (SELECT all_anime_id FROM anime_genres WHERE genre_id IN (${sql.join(includeGenreIds.map((id) => sql`${id}`), sql`, `)}))`
-    );
+    if (genreMatchMode === "all") {
+      // ALL mode: anime must have every specified genre
+      conditions.push(
+        sql`(SELECT COUNT(DISTINCT genre_id) FROM anime_genres WHERE all_anime_id = ae.id AND genre_id IN (${sql.join(includeGenreIds.map((id) => sql`${id}`), sql`, `)})) = ${includeGenreIds.length}`
+      );
+    } else {
+      // ANY mode: anime must have at least one of the specified genres
+      conditions.push(
+        sql`ae.id IN (SELECT all_anime_id FROM anime_genres WHERE genre_id IN (${sql.join(includeGenreIds.map((id) => sql`${id}`), sql`, `)}))`
+      );
+    }
   }
 
   // Exclude anime with certain tags
@@ -618,11 +653,19 @@ async function buildCandidateQuery(
     );
   }
 
-  // Include anime with at least one of the included tags
+  // Include anime with matching tags (ANY = at least one, ALL = every specified tag)
   if (includeTagIds.length > 0) {
-    conditions.push(
-      sql`ae.id IN (SELECT anime_id FROM anime_tags WHERE tag_id IN (${sql.join(includeTagIds.map((id) => sql`${id}`), sql`, `)}))`
-    );
+    if (tagMatchMode === "all") {
+      // ALL mode: anime must have every specified tag
+      conditions.push(
+        sql`(SELECT COUNT(DISTINCT tag_id) FROM anime_tags WHERE anime_id = ae.id AND tag_id IN (${sql.join(includeTagIds.map((id) => sql`${id}`), sql`, `)})) = ${includeTagIds.length}`
+      );
+    } else {
+      // ANY mode: anime must have at least one of the specified tags
+      conditions.push(
+        sql`ae.id IN (SELECT anime_id FROM anime_tags WHERE tag_id IN (${sql.join(includeTagIds.map((id) => sql`${id}`), sql`, `)}))`
+      );
+    }
   }
 
   const whereClause = conditions.length > 0
