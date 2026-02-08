@@ -49,7 +49,8 @@ export default async function AnimeDetailPage({
       coverImage: allAnime.coverImage,
     })
     .from(allAnime)
-    .where(eq(allAnime.franchiseId, anime.franchiseId));
+    .where(eq(allAnime.franchiseId, anime.franchiseId))
+    .orderBy(asc(allAnime.releaseYear));
 
   const franchiseAnime = allFranchise.filter((a) => a.id !== animeId);
 
