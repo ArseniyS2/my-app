@@ -21,7 +21,7 @@ export default async function AnimeDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const session = await getServerSession(authOptions);
-  if (!session) redirect("/signin");
+  if (!session?.user?.id) redirect("/signin");
 
   const { id } = await params;
   const animeId = parseInt(id, 10);

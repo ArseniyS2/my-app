@@ -7,7 +7,7 @@ import DashboardContent from "./DashboardContent";
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   // Layout already redirects if no session, but guard just in case
-  if (!session) return null;
+  if (!session?.user?.id) return null;
 
   const [user] = await db
     .select({ userPicture: users.userPicture })

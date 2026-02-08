@@ -7,7 +7,7 @@ import { eq } from "drizzle-orm";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session)
+  if (!session?.user?.id)
     return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   // Rate limit: 5 password change attempts per 15 minutes per user

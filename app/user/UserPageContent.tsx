@@ -20,6 +20,13 @@ interface StatsData {
   genreBreakdown: GenreData[];
 }
 
+interface SessionData {
+  id: string;
+  createdAt: string;
+  expiresAt: string;
+  isCurrent: boolean;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Genre colour palette                                               */
 /* ------------------------------------------------------------------ */
@@ -276,6 +283,12 @@ export default function UserPageContent({
   const [pwSuccess, setPwSuccess] = useState(false);
   const [pwLoading, setPwLoading] = useState(false);
 
+  /* ---- Sessions state ---- */
+  const [userSessions, setUserSessions] = useState<SessionData[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [sessionsFetched, setSessionsFetched] = useState(false);
+  const [logoutEverywhereLoading, setLogoutEverywhereLoading] = useState(false);
+
   /* ---- Picture state ---- */
   const [pictureUrl, setPictureUrl] = useState(userPicture ?? "");
   const [currentPicture, setCurrentPicture] = useState(userPicture);
@@ -293,6 +306,20 @@ export default function UserPageContent({
       })
       .catch(() => setStatsLoading(false));
   }, []);
+
+  /* ---- Fetch sessions when security tab is opened ---- */
+  useEffect(() => {
+    if (activeTab !== "security" || sessionsFetched) return;
+    setSessionsLoading(true);
+    fetch("/api/user/sessions")
+      .then((r) => r.json())
+      .then((d: SessionData[]) => {
+        setUserSessions(d);
+        setSessionsFetched(true);
+      })
+      .catch(() => {})
+      .finally(() => setSessionsLoading(false));
+  }, [activeTab, sessionsFetched]);
 
   /* ---- Password validation ---- */
   const validatePassword = (pw: string): string | null => {
@@ -342,6 +369,17 @@ export default function UserPageContent({
       setPwError("Network error. Please try again.");
     } finally {
       setPwLoading(false);
+    }
+  };
+
+  /* ---- Log out everywhere ---- */
+  const handleLogoutEverywhere = async () => {
+    setLogoutEverywhereLoading(true);
+    try {
+      await fetch("/api/user/sessions", { method: "DELETE" });
+      signOut({ callbackUrl: "/" });
+    } catch {
+      setLogoutEverywhereLoading(false);
     }
   };
 
@@ -710,20 +748,114 @@ export default function UserPageContent({
                 </button>
               </div>
 
-              {/* ---- Log out ---- */}
-              <div className="mt-8 rounded-xl border border-[#3A1820] bg-[#1A1625] p-6">
-                <h3 className="mb-2 text-base font-semibold text-[#E06B7A]">
-                  Sign Out
+              {/* ---- Active Sessions ---- */}
+              <div className="mt-8 rounded-xl border border-[#2A2440] bg-[#1A1625] p-6">
+                <h3 className="mb-1 text-base font-semibold">
+                  Active Sessions
                 </h3>
                 <p className="mb-4 text-sm text-[#8B7FA0]">
-                  Sign out of your account on this device.
+                  Devices currently signed in with your account.
+                </p>
+
+                {sessionsLoading ? (
+                  <div className="flex justify-center py-8">
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#E064D6] border-t-transparent" />
+                  </div>
+                ) : userSessions.length === 0 ? (
+                  <p className="py-4 text-center text-sm text-[#8B7FA0]">
+                    No active sessions found.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {userSessions.map((s) => (
+                      <div
+                        key={s.id}
+                        className={`rounded-lg border px-4 py-3 ${
+                          s.isCurrent
+                            ? "border-[#E064D6]/40 bg-[#E064D6]/5"
+                            : "border-[#2A2440] bg-[#13111C]"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {/* Device icon */}
+                          <svg
+                            className="h-4 w-4 flex-shrink-0 text-[#8B7FA0]"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth={1.8}
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25A2.25 2.25 0 015.25 3h13.5A2.25 2.25 0 0121 5.25z"
+                            />
+                          </svg>
+                          <span className="text-sm font-medium text-[#E8E0F0]">
+                            Session
+                          </span>
+                          {s.isCurrent && (
+                            <span className="rounded-full bg-[#E064D6]/20 px-2 py-0.5 text-[10px] font-semibold text-[#E064D6]">
+                              Current
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-xs text-[#8B7FA0]">
+                          <span>
+                            Created:{" "}
+                            <span className="text-[#C8BDD9]">
+                              {new Date(s.createdAt).toLocaleDateString(
+                                undefined,
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                }
+                              )}
+                            </span>
+                          </span>
+                          <span>
+                            Expires:{" "}
+                            <span className="text-[#C8BDD9]">
+                              {new Date(s.expiresAt).toLocaleDateString(
+                                undefined,
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                }
+                              )}
+                            </span>
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* ---- Log out everywhere ---- */}
+              <div className="mt-8 rounded-xl border border-[#3A1820] bg-[#1A1625] p-6">
+                <h3 className="mb-2 text-base font-semibold text-[#E06B7A]">
+                  Sign Out Everywhere
+                </h3>
+                <p className="mb-4 text-sm text-[#8B7FA0]">
+                  Revoke all active sessions and sign out from every device,
+                  including this one.
                 </p>
                 <button
                   type="button"
-                  onClick={() => signOut({ callbackUrl: "/" })}
-                  className="w-full rounded-lg border border-[#5A2832] bg-[#3A1820] py-3 text-sm font-semibold text-[#E06B7A] transition-all hover:bg-[#4A2030] hover:text-[#FF8A9A]"
+                  onClick={handleLogoutEverywhere}
+                  disabled={logoutEverywhereLoading}
+                  className="w-full rounded-lg border border-[#5A2832] bg-[#3A1820] py-3 text-sm font-semibold text-[#E06B7A] transition-all hover:bg-[#4A2030] hover:text-[#FF8A9A] disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  Log Out
+                  {logoutEverywhereLoading
+                    ? "Signing out…"
+                    : "Log Out Everywhere"}
                 </button>
               </div>
             </div>

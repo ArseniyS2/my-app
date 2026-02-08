@@ -8,6 +8,6 @@ import { authOptions } from "@/lib/auth";
  */
 export default async function RecommendFallbackPage() {
   const session = await getServerSession(authOptions);
-  if (!session) redirect("/signin");
+  if (!session?.user?.id) redirect("/signin");
   redirect("/dashboard");
 }

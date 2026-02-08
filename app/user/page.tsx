@@ -7,7 +7,7 @@ import UserPageContent from "./UserPageContent";
 
 export default async function UserPage() {
   const session = await getServerSession(authOptions);
-  if (!session) redirect("/signin");
+  if (!session?.user?.id) redirect("/signin");
 
   const [user] = await db
     .select({
