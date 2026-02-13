@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
+import OverviewTab, { type StatsData } from "./OverviewTab";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -10,167 +11,11 @@ import { signOut } from "next-auth/react";
 
 type Tab = "overview" | "security" | "picture";
 
-interface GenreData {
-  genreName: string;
-  count: number;
-}
-
-interface StatsData {
-  completedCount: number;
-  genreBreakdown: GenreData[];
-}
-
 interface SessionData {
   id: string;
   createdAt: string;
   expiresAt: string;
   isCurrent: boolean;
-}
-
-/* ------------------------------------------------------------------ */
-/*  Genre colour palette                                               */
-/* ------------------------------------------------------------------ */
-
-const GENRE_COLORS: Record<string, string> = {
-  Action: "#FF6B6B",
-  Adventure: "#4ECDC4",
-  Comedy: "#FFD93D",
-  Drama: "#6C9BCF",
-  Romance: "#FF85A2",
-  Psychological: "#A855F7",
-  Suspense: "#5B8DEF",
-  Tragedy: "#94A3B8",
-  Fantasy: "#C084FC",
-  "Sci-Fi": "#22D3EE",
-  Horror: "#EF4444",
-  Mystery: "#8B5CF6",
-  "Slice of Life": "#34D399",
-  Sports: "#F97316",
-  Supernatural: "#D946EF",
-  Thriller: "#6366F1",
-  Ecchi: "#FB7185",
-  Music: "#FBBF24",
-  Mecha: "#14B8A6",
-};
-
-const FALLBACK_COLORS = [
-  "#F472B6",
-  "#818CF8",
-  "#34D399",
-  "#FBBF24",
-  "#FB923C",
-  "#A78BFA",
-  "#38BDF8",
-  "#F87171",
-];
-
-function getGenreColor(name: string, idx: number): string {
-  return GENRE_COLORS[name] ?? FALLBACK_COLORS[idx % FALLBACK_COLORS.length];
-}
-
-/* ------------------------------------------------------------------ */
-/*  Donut chart                                                        */
-/* ------------------------------------------------------------------ */
-
-function DonutChart({
-  data,
-  completedCount,
-}: {
-  data: { name: string; count: number; color: string; percentage: number }[];
-  completedCount: number;
-}) {
-  const size = 220;
-  const cx = size / 2;
-  const cy = size / 2;
-  const outerR = 95;
-  const innerR = 60;
-
-  const total = data.reduce((s, d) => s + d.count, 0);
-  if (total === 0) {
-    return (
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <circle cx={cx} cy={cy} r={outerR} fill="#2A2440" />
-        <circle cx={cx} cy={cy} r={innerR} fill="#0D0B14" />
-        <text
-          x={cx}
-          y={cy}
-          textAnchor="middle"
-          dominantBaseline="central"
-          fill="#8B7FA0"
-          fontSize="14"
-        >
-          No data
-        </text>
-      </svg>
-    );
-  }
-
-  const polarToCartesian = (angle: number, r: number) => {
-    const rad = ((angle - 90) * Math.PI) / 180;
-    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
-  };
-
-  const segments = data.reduce<
-    { name: string; count: number; color: string; percentage: number; startAngle: number; endAngle: number }[]
-  >((acc, d) => {
-    const prev = acc.length > 0 ? acc[acc.length - 1].endAngle : 0;
-    const angle = (d.count / total) * 360;
-    acc.push({ ...d, startAngle: prev, endAngle: prev + angle });
-    return acc;
-  }, []);
-
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      {/* Background ring */}
-      <circle cx={cx} cy={cy} r={outerR} fill="#2A2440" />
-
-      {/* Segments */}
-      {segments.map((seg, i) => {
-        const span = seg.endAngle - seg.startAngle;
-        if (span >= 359.99) {
-          return (
-            <circle key={i} cx={cx} cy={cy} r={outerR} fill={seg.color} />
-          );
-        }
-        const p1 = polarToCartesian(seg.startAngle, outerR);
-        const p2 = polarToCartesian(seg.endAngle, outerR);
-        const largeArc = span > 180 ? 1 : 0;
-        const d = [
-          `M ${cx} ${cy}`,
-          `L ${p1.x} ${p1.y}`,
-          `A ${outerR} ${outerR} 0 ${largeArc} 1 ${p2.x} ${p2.y}`,
-          "Z",
-        ].join(" ");
-        return <path key={i} d={d} fill={seg.color} />;
-      })}
-
-      {/* Inner circle (donut hole) */}
-      <circle cx={cx} cy={cy} r={innerR} fill="#0D0B14" />
-
-      {/* Center text */}
-      <text
-        x={cx}
-        y={cy - 8}
-        textAnchor="middle"
-        dominantBaseline="central"
-        fill="#E8E0F0"
-        fontSize="28"
-        fontWeight="bold"
-      >
-        {completedCount}
-      </text>
-      <text
-        x={cx}
-        y={cy + 16}
-        textAnchor="middle"
-        dominantBaseline="central"
-        fill="#8B7FA0"
-        fontSize="11"
-      >
-        completed
-      </text>
-    </svg>
-  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -421,20 +266,6 @@ export default function UserPageContent({
     }
   };
 
-  /* ---- Prepare chart data ---- */
-  const chartData = (stats?.genreBreakdown ?? []).map((g, i) => {
-    const totalGenre = (stats?.genreBreakdown ?? []).reduce(
-      (s, d) => s + d.count,
-      0
-    );
-    return {
-      name: g.genreName,
-      count: g.count,
-      color: getGenreColor(g.genreName, i),
-      percentage: totalGenre > 0 ? (g.count / totalGenre) * 100 : 0,
-    };
-  });
-
   /* ---- Password strength indicator ---- */
   const pwStrength = (() => {
     if (!newPassword) return { label: "", color: "", width: "0%" };
@@ -523,68 +354,7 @@ export default function UserPageContent({
         <main className="min-w-0 flex-1">
           {/* ============ OVERVIEW ============ */}
           {activeTab === "overview" && (
-            <div>
-              <h2 className="mb-6 text-xl font-bold">Overview</h2>
-
-              {statsLoading ? (
-                <div className="flex justify-center py-16">
-                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#E064D6] border-t-transparent" />
-                </div>
-              ) : (
-                <>
-                  {/* Completed count card */}
-                  <div className="mb-8 rounded-xl border border-[#2A2440] bg-[#1A1625] p-6">
-                    <p className="mb-1 text-sm text-[#8B7FA0]">
-                      Anime Completed
-                    </p>
-                    <p className="text-4xl font-bold text-[#E064D6]">
-                      {stats?.completedCount ?? 0}
-                    </p>
-                  </div>
-
-                  {/* Genre pie chart */}
-                  <div className="rounded-xl border border-[#2A2440] bg-[#1A1625] p-6">
-                    <h3 className="mb-5 text-base font-semibold">
-                      Genre Distribution
-                    </h3>
-
-                    {chartData.length === 0 ? (
-                      <p className="py-8 text-center text-sm text-[#8B7FA0]">
-                        No genre data yet.
-                      </p>
-                    ) : (
-                      <div className="flex flex-col items-center gap-8 sm:flex-row sm:items-start">
-                        <DonutChart
-                          data={chartData}
-                          completedCount={stats?.completedCount ?? 0}
-                        />
-
-                        {/* Legend */}
-                        <div className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
-                          {chartData.map((g, i) => (
-                            <div
-                              key={i}
-                              className="flex items-center gap-2"
-                            >
-                              <span
-                                className="inline-block h-3 w-3 flex-shrink-0 rounded-sm"
-                                style={{ backgroundColor: g.color }}
-                              />
-                              <span className="text-sm text-[#C8BDD9]">
-                                {g.name}
-                              </span>
-                              <span className="ml-auto text-sm font-medium tabular-nums">
-                                {g.percentage.toFixed(1)}%
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
+            <OverviewTab stats={stats} loading={statsLoading} />
           )}
 
           {/* ============ SECURITY ============ */}
