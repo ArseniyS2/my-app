@@ -167,6 +167,7 @@ export default async function AnimeDetailPage({
           : null,
         review: userRatingRow.review,
         status: userRatingRow.status,
+        watchedDate: userRatingRow.watchedDate ?? null,
       }
     : null;
 

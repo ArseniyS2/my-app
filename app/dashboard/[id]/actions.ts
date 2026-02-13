@@ -180,6 +180,26 @@ export async function addUserGenre(
   revalidatePath(`/dashboard/${animeId}`);
 }
 
+export async function updateWatchedDate(animeId: number, date: string | null) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const existing = await getFranchiseRating(animeId, session.user.id);
+  if (!existing) throw new Error("Rating not found");
+
+  await db
+    .update(userRating)
+    .set({ watchedDate: date })
+    .where(
+      and(
+        eq(userRating.id, existing.id),
+        eq(userRating.userId, session.user.id)
+      )
+    );
+
+  revalidatePath(`/dashboard/${animeId}`);
+}
+
 export async function removeUserGenre(animeId: number, genreId: number) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) throw new Error("Unauthorized");

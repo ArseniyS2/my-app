@@ -11,6 +11,7 @@ import {
   timestamp,
   unique,
   uuid,
+  date
 } from "drizzle-orm/pg-core";
 
 // User table already exists – do not duplicate
@@ -85,6 +86,7 @@ export const userRating = pgTable(
     rating: numeric("rating", { precision: 3, scale: 1 }), // Nullable: no rating for DROPPED/PLANNING
     review: text("review").notNull(),
     status: animeStatusEnum("status").notNull(),
+    watchedDate: date("watched_date", { mode: "string" }),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id),

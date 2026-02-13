@@ -6,10 +6,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import SignOutButton from "../SignOutButton";
+import { WatchedDateCalendar } from "./WatchedDateCalendar";
 import {
   setAnimeStatus,
   updateReview,
   updateScore,
+  updateWatchedDate,
   removeFromWatchlist,
   addUserGenre,
   removeUserGenre,
@@ -42,6 +44,7 @@ interface UserRatingData {
   rating: number | null;
   review: string;
   status: string;
+  watchedDate: string | null;
 }
 
 interface FranchiseAnime {
@@ -192,6 +195,17 @@ export default function AnimeDetailContent({
   const statusRef = useRef<HTMLDivElement>(null);
   const scoreInputRef = useRef<HTMLInputElement>(null);
   const genrePickerRef = useRef<HTMLDivElement>(null);
+  const calendarRef = useRef<HTMLDivElement>(null);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarDate, setCalendarDate] = useState<string>(
+    initialRating?.watchedDate ?? ""
+  );
+  const [calendarView, setCalendarView] = useState<{ year: number; month: number }>(() => {
+    const d = initialRating?.watchedDate
+      ? new Date(initialRating.watchedDate + "T12:00:00")
+      : new Date();
+    return { year: d.getFullYear(), month: d.getMonth() + 1 };
+  });
 
   /* close status dropdown on outside click */
   useEffect(() => {
@@ -220,6 +234,21 @@ export default function AnimeDetailContent({
     return () => document.removeEventListener("mousedown", handler);
   }, [genrePickerOpen]);
 
+  /* close calendar on outside click */
+  useEffect(() => {
+    if (!calendarOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        calendarRef.current &&
+        !calendarRef.current.contains(e.target as Node)
+      ) {
+        setCalendarOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [calendarOpen]);
+
   /* focus score input when editing */
   useEffect(() => {
     if (scoreEditing && scoreInputRef.current) {
@@ -238,7 +267,7 @@ export default function AnimeDetailContent({
       setCurrentRating((prev) =>
         prev
           ? { ...prev, status }
-          : { id: ratingId, rating: null, review: "", status }
+          : { id: ratingId, rating: null, review: "", status, watchedDate: null }
       );
       /* When first adding to watchlist or switching to PLANNING, show default genres */
       if (wasNew || status === "PLANNING") setCurrentGenres(defaultGenres);
@@ -316,6 +345,29 @@ export default function AnimeDetailContent({
     });
   };
 
+  const handleSaveWatchedDate = (date: string) => {
+    setCalendarOpen(false);
+    const value = date || null;
+    setCurrentRating((prev) =>
+      prev ? { ...prev, watchedDate: value } : prev
+    );
+    startTransition(async () => {
+      await updateWatchedDate(anime.id, value);
+      router.refresh();
+    });
+  };
+
+  const handleClearWatchedDate = () => {
+    setCalendarOpen(false);
+    setCurrentRating((prev) =>
+      prev ? { ...prev, watchedDate: null } : prev
+    );
+    startTransition(async () => {
+      await updateWatchedDate(anime.id, null);
+      router.refresh();
+    });
+  };
+
   /* genres available to add (not yet assigned) */
   const assignedGenreIds = new Set(currentGenres.map((g) => g.id));
   const unassignedGenres = allGenres.filter((g) => !assignedGenreIds.has(g.id));
@@ -385,40 +437,41 @@ export default function AnimeDetailContent({
               />
             </div>
 
-            {/* status / add-to-watchlist button */}
-            <div ref={statusRef} className="relative w-[180px]">
-              {currentRating ? (
-                <button
-                  onClick={() => setStatusOpen((o) => !o)}
-                  disabled={isPending}
-                  className={`flex w-full items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${statusStyle!.bg} ${statusStyle!.text} ${statusStyle!.border}`}
-                >
-                  {STATUS_LABELS[statusKey!]}
-                  <svg
-                    className={`h-3.5 w-3.5 transition-transform duration-200 ${statusOpen ? "rotate-180" : ""}`}
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2.5}
-                    viewBox="0 0 24 24"
+            {/* status / add-to-watchlist button + watched date */}
+            <div className="flex items-start gap-2 w-[180px]">
+              <div ref={statusRef} className="relative flex-1 min-w-0">
+                {currentRating ? (
+                  <button
+                    onClick={() => setStatusOpen((o) => !o)}
+                    disabled={isPending}
+                    className={`flex w-full items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${statusStyle!.bg} ${statusStyle!.text} ${statusStyle!.border}`}
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </svg>
-                </button>
-              ) : (
-                <button
-                  onClick={() => setStatusOpen((o) => !o)}
-                  disabled={isPending}
-                  className="w-full rounded-lg bg-[#E064D6] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_0_14px_rgba(224,100,214,0.35)] transition-all hover:bg-[#C850C0] hover:shadow-[0_0_20px_rgba(224,100,214,0.5)] disabled:opacity-50"
-                >
-                  Add to watchlist
-                </button>
-              )}
+                    {STATUS_LABELS[statusKey!]}
+                    <svg
+                      className={`h-3.5 w-3.5 transition-transform duration-200 ${statusOpen ? "rotate-180" : ""}`}
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2.5}
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setStatusOpen((o) => !o)}
+                    disabled={isPending}
+                    className="w-full rounded-lg bg-[#E064D6] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_0_14px_rgba(224,100,214,0.35)] transition-all hover:bg-[#C850C0] hover:shadow-[0_0_20px_rgba(224,100,214,0.5)] disabled:opacity-50"
+                  >
+                    Add to watchlist
+                  </button>
+                )}
 
-              {/* dropdown */}
+                {/* dropdown */}
               {statusOpen && (
                 <div className="absolute left-0 top-full z-50 mt-1.5 w-full overflow-hidden rounded-lg border border-[#2A2440] bg-[#1C1830] py-1 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
                   {ALL_STATUSES.map((s) => {
@@ -448,6 +501,62 @@ export default function AnimeDetailContent({
                   )}
                 </div>
               )}
+              </div>
+
+              {/* watched date button - only when COMPLETED or DROPPED */}
+              {currentRating &&
+                (statusKey === "COMPLETED" || statusKey === "DROPPED") && (
+                  <div ref={calendarRef} className="relative flex-shrink-0">
+                    <button
+                      onClick={() => {
+                        const d = currentRating.watchedDate
+                          ? new Date(currentRating.watchedDate + "T12:00:00")
+                          : new Date();
+                        setCalendarDate(currentRating.watchedDate ?? "");
+                        setCalendarView({ year: d.getFullYear(), month: d.getMonth() + 1 });
+                        setCalendarOpen((o) => !o);
+                      }}
+                      disabled={isPending}
+                      title={
+                        currentRating.watchedDate
+                          ? "Change watched date"
+                          : "Set watched date"
+                      }
+                      className={`flex h-10 w-10 items-center justify-center rounded-lg border transition-colors ${
+                        currentRating.watchedDate
+                          ? "border-[#E064D6]/50 bg-[#E064D6]/15 text-[#E064D6]"
+                          : "border-[#2A2440] bg-[#1A1625] text-[#8B7FA0] hover:border-[#36285A] hover:text-[#E064D6]"
+                      } disabled:opacity-50`}
+                    >
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                    </button>
+
+                    {/* custom calendar popover */}
+                    {calendarOpen && (
+                      <WatchedDateCalendar
+                        value={calendarDate}
+                        onChange={setCalendarDate}
+                        onChoose={() => calendarDate && handleSaveWatchedDate(calendarDate)}
+                        onCancel={() => setCalendarOpen(false)}
+                        onClear={handleClearWatchedDate}
+                        isPending={isPending}
+                        initialView={calendarView}
+                      />
+                    )}
+                  </div>
+                )}
             </div>
           </div>
 
@@ -510,6 +619,26 @@ export default function AnimeDetailContent({
               className="mt-4 leading-relaxed text-[#B8AEC8] [&_i]:italic [&_b]:font-semibold [&_a]:text-[#E064D6] [&_a]:underline"
               dangerouslySetInnerHTML={{ __html: sanitizedSynopsis }}
             />
+
+            {/* ---- watched date (between synopsis and review, when COMPLETED or DROPPED) ---- */}
+            {currentRating &&
+              (statusKey === "COMPLETED" || statusKey === "DROPPED") && (
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold">Watched date</h3>
+                <p className="mt-2 text-[#B8AEC8]">
+                  {currentRating.watchedDate
+                    ? new Date(currentRating.watchedDate + "T12:00:00").toLocaleDateString(
+                        "en-US",
+                        {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        }
+                      )
+                    : "—"}
+                </p>
+              </div>
+            )}
 
             {/* ---- review section (only when in watchlist and not PLANNING) ---- */}
             {currentRating && !isPlanning && (

@@ -28,7 +28,13 @@ export async function GET(req: NextRequest) {
   const source = url.searchParams.get("source") ?? "user";
   const genreFilter = url.searchParams.get("genre") ?? "Overall";
   const search = (url.searchParams.get("search") ?? "").trim();
-  const sort = url.searchParams.get("sort") === "desc" ? "desc" : "asc";
+  const sortParam = url.searchParams.get("sort") ?? "rating_desc";
+  const sort =
+    sortParam === "rating_asc" || sortParam === "rating_desc"
+      ? (sortParam === "rating_desc" ? "desc" : "asc")
+      : sortParam === "watched_asc" || sortParam === "watched_desc"
+        ? sortParam
+        : "rating_desc";
   const statusFilter = url.searchParams.get("status") ?? null;
   const offset = Math.max(
     0,
@@ -107,6 +113,15 @@ async function handleUserAnime(
     );
   }
 
+  const orderBy =
+    sort === "watched_desc"
+      ? sql`${userRating.watchedDate} desc nulls last`
+      : sort === "watched_asc"
+        ? sql`${userRating.watchedDate} asc nulls first`
+        : sort === "asc"
+          ? sql`${userRating.rating} asc nulls last`
+          : sql`${userRating.rating} desc nulls last`;
+
   const rows = await db
     .select({
       userRatingId: userRating.id,
@@ -119,11 +134,7 @@ async function handleUserAnime(
     .from(userRating)
     .innerJoin(allAnime, eq(userRating.animeId, allAnime.id))
     .where(and(...conditions))
-    .orderBy(
-      sort === "asc"
-        ? sql`${userRating.rating} asc nulls last`
-        : sql`${userRating.rating} desc nulls last`
-    )
+    .orderBy(orderBy)
     .offset(offset)
     .limit(limit);
 
@@ -226,6 +237,16 @@ async function handleAllAnime(
   const whereClause =
     conditions.length > 0 ? and(...conditions) : undefined;
 
+  /* All anime: watched sort uses release_year; rating sort uses avgScore */
+  const allOrderBy =
+    sort === "watched_desc"
+      ? desc(allAnime.releaseYear)
+      : sort === "watched_asc"
+        ? asc(allAnime.releaseYear)
+        : sort === "asc"
+          ? asc(allAnime.avgScore)
+          : desc(allAnime.avgScore);
+
   const rows = await db
     .select({
       id: allAnime.id,
@@ -235,7 +256,7 @@ async function handleAllAnime(
     })
     .from(allAnime)
     .where(whereClause)
-    .orderBy(sort === "asc" ? asc(allAnime.avgScore) : desc(allAnime.avgScore))
+    .orderBy(allOrderBy)
     .offset(offset)
     .limit(limit);
 

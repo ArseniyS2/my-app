@@ -1,0 +1,1 @@
+ALTER TABLE "user_rating" ADD COLUMN "watched_date" date;

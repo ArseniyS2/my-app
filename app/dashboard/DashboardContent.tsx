@@ -164,7 +164,9 @@ export default function DashboardContent({
   const [selectedGenre, setSelectedGenre] = useState("Overall");
   const [searchQuery, setSearchQuery] = useState("");
   const [source, setSource] = useState<"user" | "all">("user");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [sortOrder, setSortOrder] = useState<
+    "rating_desc" | "rating_asc" | "watched_desc" | "watched_asc"
+  >("rating_desc");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
   /* ---------- data state ---------- */
@@ -442,7 +444,7 @@ export default function DashboardContent({
         {/* ---- search bar + dropdowns ---- */}
         <div className="mb-6 flex flex-wrap gap-3" suppressHydrationWarning>
           {/* search */}
-          <div className="relative min-w-[180px] flex-1">
+          <div className="relative min-w-[180px] flex-1" suppressHydrationWarning>
             <svg
               className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8B7FA0]"
               fill="none"
@@ -499,8 +501,10 @@ export default function DashboardContent({
           <CustomDropdown
             value={sortOrder}
             options={[
-              { value: "desc", label: "Sort by: Rating DESC" },
-              { value: "asc", label: "Sort by: Rating ASC" },
+              { value: "rating_desc", label: "Sort by: Rating DESC" },
+              { value: "rating_asc", label: "Sort by: Rating ASC" },
+              { value: "watched_desc", label: "Sort by: Watched date DESC" },
+              { value: "watched_asc", label: "Sort by: Watched date ASC" },
             ]}
             onChange={setSortOrder}
           />
