@@ -115,12 +115,12 @@ async function handleUserAnime(
 
   const orderBy =
     sort === "watched_desc"
-      ? sql`${userRating.watchedDate} desc nulls last`
+      ? sql`${userRating.watchedDate} desc nulls last, ${userRating.id} desc`
       : sort === "watched_asc"
-        ? sql`${userRating.watchedDate} asc nulls first`
+        ? sql`${userRating.watchedDate} asc nulls first, ${userRating.id} asc`
         : sort === "asc"
-          ? sql`${userRating.rating} asc nulls last`
-          : sql`${userRating.rating} desc nulls last`;
+          ? sql`${userRating.rating} asc nulls last, ${userRating.id} asc`
+          : sql`${userRating.rating} desc nulls last, ${userRating.id} desc`;
 
   const rows = await db
     .select({
@@ -256,7 +256,7 @@ async function handleAllAnime(
     })
     .from(allAnime)
     .where(whereClause)
-    .orderBy(allOrderBy)
+    .orderBy(allOrderBy, desc(allAnime.id))
     .offset(offset)
     .limit(limit);
 
