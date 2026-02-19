@@ -42,6 +42,7 @@ The recommendation system suggests anime based on the user's tastes via a multi-
   - User's free text description (if provided)
 - For each candidate, constructs a **document string** from:
   - Title, genres, tags (top 10), and a truncated synopsis (200 chars).
+- Passes an instruction: "Rank these anime by relevance to the user's stated preferences and seed anime."
 - Calls DeepInfra's `Qwen/Qwen3-Reranker-8B` reranker API, which returns relevance scores.
 - Candidates are re-sorted by reranker score (descending).
 - Falls back to vector similarity order if the reranker API call fails.

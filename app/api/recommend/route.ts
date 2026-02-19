@@ -710,6 +710,8 @@ async function callReranker(
       body: JSON.stringify({
         queries: [query],
         documents,
+        instruction:
+          "Rank these anime by relevance to the user's stated preferences and seed anime.",
       }),
     }
   );
