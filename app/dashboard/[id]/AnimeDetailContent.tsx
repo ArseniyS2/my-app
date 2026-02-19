@@ -388,6 +388,7 @@ export default function AnimeDetailContent({
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
           <Link
             href="/dashboard"
+            scroll={false}
             className="text-lg font-semibold tracking-tight"
           >
             Kizuna
@@ -416,6 +417,7 @@ export default function AnimeDetailContent({
         {/* back link */}
         <Link
           href="/dashboard"
+          scroll={false}
           className="inline-flex items-center gap-1 text-sm text-[#8B7FA0] transition-colors hover:text-[#E8E0F0]"
         >
           &larr; Back to dashboard

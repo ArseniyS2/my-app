@@ -8,6 +8,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import SignOutButton from "./SignOutButton";
 import { useRecommendStore, type RecommendedAnime } from "./recommend-store";
+import { useDashboardUi } from "./dashboard-ui-store";
 
 /* ------------------------------------------------------------------ */
 /*  Constants & types                                                  */
@@ -161,17 +162,22 @@ export default function DashboardContent({
 }) {
   const router = useRouter();
 
-  /* ---------- filter state ---------- */
-  const [selectedGenre, setSelectedGenre] = useState("Overall");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [source, setSource] = useState<"user" | "all">("user");
-  const [sortOrder, setSortOrder] = useState<
-    "rating_desc" | "rating_asc" | "watched_desc" | "watched_asc"
-  >("rating_desc");
-  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  /* ---------- filter state (Zustand – survives client navigation) ---------- */
+  const {
+    selectedGenre,
+    setSelectedGenre,
+    searchQuery,
+    setSearchQuery,
+    source,
+    setSource,
+    sortOrder,
+    setSortOrder,
+    statusFilter,
+    setStatusFilter,
+  } = useDashboardUi();
 
   /* ---------- debounced search ---------- */
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -394,10 +400,7 @@ export default function DashboardContent({
                   { value: "user", label: "Your anime" },
                   { value: "all", label: "All anime" },
                 ]}
-                onChange={(v) => {
-                  setSource(v);
-                  if (v === "all") setStatusFilter("ALL");
-                }}
+                onChange={setSource}
               />
 
               {/* status filter dropdown (only for user's anime) */}
@@ -422,14 +425,18 @@ export default function DashboardContent({
                 options={[
                   { value: "rating_desc", label: "Sort by: Rating DESC" },
                   { value: "rating_asc", label: "Sort by: Rating ASC" },
-                  {
-                    value: "watched_desc",
-                    label: "Sort by: Watched date DESC",
-                  },
-                  {
-                    value: "watched_asc",
-                    label: "Sort by: Watched date ASC",
-                  },
+                  ...(source === "user"
+                    ? [
+                        {
+                          value: "watched_desc" as const,
+                          label: "Sort by: Watched date DESC",
+                        },
+                        {
+                          value: "watched_asc" as const,
+                          label: "Sort by: Watched date ASC",
+                        },
+                      ]
+                    : []),
                 ]}
                 onChange={setSortOrder}
               />

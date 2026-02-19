@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useRecommendStore } from "./recommend-store";
+import { useRecommendStore, type SeedAnime } from "./recommend-store";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                               */
@@ -12,13 +12,6 @@ import { useRecommendStore } from "./recommend-store";
 interface AnimeSearchResult {
   id: number;
   titleEnglish: string;
-  coverImage: string;
-  rating: number | null;
-}
-
-interface SeedAnime {
-  id: number;
-  title: string;
   coverImage: string;
   rating: number | null;
 }
@@ -162,24 +155,25 @@ function ChipInput({
 
 export default function RecommendDrawer() {
   const router = useRouter();
-  const { setResults, setLoading, setError } = useRecommendStore();
+  const { setResults, setLoading, setError, setRequestParams, requestParams } =
+    useRecommendStore();
 
-  /* ---- Seed selection state ---- */
-  const [useTopRated, setUseTopRated] = useState(true);
+  /* ---- Seed selection state (initialized from store for "edit request") ---- */
+  const [useTopRated, setUseTopRated] = useState(requestParams.useTopRated);
   const [seedSearch, setSeedSearch] = useState("");
   const [seedResults, setSeedResults] = useState<AnimeSearchResult[]>([]);
-  const [selectedSeeds, setSelectedSeeds] = useState<SeedAnime[]>([]);
+  const [selectedSeeds, setSelectedSeeds] = useState<SeedAnime[]>(requestParams.selectedSeeds);
   const [seedSearching, setSeedSearching] = useState(false);
 
-  /* ---- Filter state ---- */
-  const [includeGenres, setIncludeGenres] = useState<string[]>([]);
-  const [excludeGenres, setExcludeGenres] = useState<string[]>([]);
-  const [includeTags, setIncludeTags] = useState<string[]>([]);
-  const [excludeTags, setExcludeTags] = useState<string[]>([]);
-  const [genreMatchMode, setGenreMatchMode] = useState<"any" | "all">("any");
-  const [tagMatchMode, setTagMatchMode] = useState<"any" | "all">("any");
-  const [excludeWatched, setExcludeWatched] = useState(true);
-  const [freeText, setFreeText] = useState("");
+  /* ---- Filter state (initialized from store for "edit request") ---- */
+  const [includeGenres, setIncludeGenres] = useState<string[]>(requestParams.includeGenres);
+  const [excludeGenres, setExcludeGenres] = useState<string[]>(requestParams.excludeGenres);
+  const [includeTags, setIncludeTags] = useState<string[]>(requestParams.includeTags);
+  const [excludeTags, setExcludeTags] = useState<string[]>(requestParams.excludeTags);
+  const [genreMatchMode, setGenreMatchMode] = useState<"any" | "all">(requestParams.genreMatchMode);
+  const [tagMatchMode, setTagMatchMode] = useState<"any" | "all">(requestParams.tagMatchMode);
+  const [excludeWatched, setExcludeWatched] = useState(requestParams.excludeWatched);
+  const [freeText, setFreeText] = useState(requestParams.freeText);
 
   /* ---- Available options ---- */
   const [allGenres, setAllGenres] = useState<string[]>([]);
@@ -266,6 +260,19 @@ export default function RecommendDrawer() {
   const handleGenerate = async () => {
     setGenerating(true);
     setLoading(true);
+
+    setRequestParams({
+      useTopRated,
+      selectedSeeds,
+      includeGenres,
+      excludeGenres,
+      includeTags,
+      excludeTags,
+      genreMatchMode,
+      tagMatchMode,
+      excludeWatched,
+      freeText,
+    });
 
     try {
       const body: Record<string, unknown> = {

@@ -12,12 +12,12 @@ A Next.js app for managing your anime library and getting personalized recommend
 - **Auth:** [NextAuth.js](https://next-auth.js.org) v4 (credentials; sessions stored in DB, validated on each request)
 - **Vector search:** [pgvector](https://github.com/pgvector/pgvector) (halfvec, HNSW index)
 - **Styling:** [Tailwind CSS](https://tailwindcss.com) v4
-- **State:** [Zustand](https://zustand-demo.pmnd.rs) (e.g. recommendation drawer)
+- **State:** [Zustand](https://zustand-demo.pmnd.rs) (dashboard filters, recommendation drawer and form params)
 
 ## Features
 
 - **Auth:** Sign in with username/password; sessions stored in DB, validated on each request; view active sessions and log out everywhere from profile
-- **Dashboard:** Browse anime, manage ratings and status (Completed, On hold, Dropped, Planning)
+- **Dashboard:** Browse anime, manage ratings and status (Completed, On hold, Dropped, Planning); filter state (genre, sort, your/library) persists when navigating to anime detail and back
 - **User profile:** Edit profile picture and password; security: change password, view active sessions, log out everywhere
 - **Recommendations:** Seed-based + genre/tag filters; vector similarity (K=200) then optional [Qwen3-Reranker-8B](https://deepinfra.com) rerank; see [RECOMMENDATION.md](./RECOMMENDATION.md) for the full pipeline and API
 
@@ -74,8 +74,9 @@ To populate anime and recommendations you need to run import scripts in order (a
 | `bun run db:import-cover-images` | Fetch and store cover image URLs |
 | `bun run db:import-embeddings` | Import embeddings (Python; see `scripts/`) |
 | `bun run db:import-user-ratings` | Import user ratings |
+| `bun run db:import-watched-dates` | Import watched dates into user ratings |
 
-See `scripts/` and `src/db/` for requirements and usage. Clear scripts: `db:clear-anime-data`, `db:clear-user-ratings`.
+See `scripts/` and `src/db/` for requirements and usage. Clear scripts: `db:clear-anime-data`, `db:clear-user-ratings`. Preprocessing: `scripts:match-ratings-to-anime` (match ratings JSON to anime IDs before import).
 
 ## Scripts
 
@@ -90,11 +91,13 @@ See `scripts/` and `src/db/` for requirements and usage. Clear scripts: `db:clea
 | `bun run db:push` | Push schema with Drizzle Kit |
 | `bun run db:studio` | Open Drizzle Studio |
 | `bun run db:seed` | Seed demo user |
+| `bun run db:import-watched-dates` | Import watched dates |
+| `bun run scripts:match-ratings-to-anime` | Match ratings JSON to anime IDs |
 
 ## Project layout
 
 - `app/` — Next.js App Router: pages, layouts, API routes (`/api/auth`, `/api/recommend`, `/api/user`, `/api/anime`)
-- `app/dashboard/` — Dashboard UI; parallel route `@recommend` for the recommendation drawer
+- `app/dashboard/` — Dashboard UI; parallel route `@recommend` for the recommendation drawer; `dashboard-ui-store.ts`, `recommend-store.ts` (Zustand)
 - `app/signin/`, `app/user/` — Sign-in and user profile
 - `lib/` — Auth config (`auth.ts`), rate limiting (`rate-limit.ts`)
 - `src/db/` — Drizzle schema, client, migrations runner, seed and import scripts

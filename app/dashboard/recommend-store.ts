@@ -23,14 +23,50 @@ export interface RecommendedAnime {
   tags: string[];
 }
 
+export interface SeedAnime {
+  id: number;
+  title: string;
+  coverImage: string;
+  rating: number | null;
+}
+
+export interface RecommendRequestParams {
+  useTopRated: boolean;
+  selectedSeeds: SeedAnime[];
+  includeGenres: string[];
+  excludeGenres: string[];
+  includeTags: string[];
+  excludeTags: string[];
+  genreMatchMode: "any" | "all";
+  tagMatchMode: "any" | "all";
+  excludeWatched: boolean;
+  freeText: string;
+}
+
+const DEFAULT_REQUEST_PARAMS: RecommendRequestParams = {
+  useTopRated: true,
+  selectedSeeds: [],
+  includeGenres: [],
+  excludeGenres: [],
+  includeTags: [],
+  excludeTags: [],
+  genreMatchMode: "any",
+  tagMatchMode: "any",
+  excludeWatched: true,
+  freeText: "",
+};
+
 interface RecommendStore {
   mode: "library" | "recommendations";
   results: RecommendedAnime[];
   loading: boolean;
   error: string | null;
+  requestParams: RecommendRequestParams;
+
   setResults: (results: RecommendedAnime[]) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  setRequestParams: (params: RecommendRequestParams) => void;
   clearRecommendations: () => void;
 }
 
@@ -39,8 +75,18 @@ export const useRecommendStore = create<RecommendStore>((set) => ({
   results: [],
   loading: false,
   error: null,
+  requestParams: { ...DEFAULT_REQUEST_PARAMS },
+
   setResults: (results) => set({ results, mode: "recommendations", loading: false, error: null }),
   setLoading: (loading) => set({ loading, error: null }),
   setError: (error) => set({ error, loading: false }),
-  clearRecommendations: () => set({ mode: "library", results: [], loading: false, error: null }),
+  setRequestParams: (requestParams) => set({ requestParams }),
+  clearRecommendations: () =>
+    set({
+      mode: "library",
+      results: [],
+      loading: false,
+      error: null,
+      requestParams: { ...DEFAULT_REQUEST_PARAMS },
+    }),
 }));
