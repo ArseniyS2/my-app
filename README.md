@@ -3,6 +3,7 @@
 **Your anime watchlist, together.**
 
 A Next.js app for managing your anime library and getting personalized recommendations via vector similarity and reranking.
+Experimential release for a new feature.
 
 ## Stack
 
