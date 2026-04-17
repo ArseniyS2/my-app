@@ -20,7 +20,8 @@
     "db:import-user-ratings": "bun run src/db/import-user-ratings.ts",
     "db:clear-user-ratings": "bun run src/db/clear-user-ratings.ts",
     "db:import-watched-dates": "bun run src/db/import-watched-dates.ts",
-    "scripts:match-ratings-to-anime": "bun run scripts/match-ratings-to-anime.ts"
+    "scripts:match-ratings-to-anime": "bun run scripts/match-ratings-to-anime.ts",
+    "db:sync-new-anime": "bun run scripts/sync_new_anime.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",

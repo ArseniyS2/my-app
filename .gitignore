@@ -23,6 +23,9 @@
 # raw info
 /raw_info
 
+# sync state (written by scripts/sync_new_anime.mjs)
+/scripts/sync_state.json
+
 # misc
 .DS_Store
 *.pem
