@@ -43,7 +43,8 @@ Experimential release for a new feature.
    ```env
    DATABASE_URL=postgresql://...   # Neon or Postgres connection string (required)
    NEXTAUTH_SECRET=...             # Random string for JWT signing (required)
-   DEEPINFRA_API_KEY=...           # Optional; for recommendation reranker
+   DEEPINFRA_API_KEY=...           # For recommendation reranker AND the weekly sync job (required for sync; optional for recs)
+   CRON_SECRET=...                 # Random token that authenticates the Vercel Cron callback to /api/cron/sync
    ```
 
    For local dev, generate a secret with e.g. `openssl rand -base64 32`.
@@ -94,6 +95,7 @@ See `scripts/` and `src/db/` for requirements and usage. Clear scripts: `db:clea
 | `bun run db:seed` | Seed demo user |
 | `bun run db:import-watched-dates` | Import watched dates |
 | `bun run scripts:match-ratings-to-anime` | Match ratings JSON to anime IDs |
+| `bun run db:sync-new-anime` | Sync newly-FINISHED anime from AniList (see **Sync** section) |
 
 ## Project layout
 
@@ -105,6 +107,60 @@ See `scripts/` and `src/db/` for requirements and usage. Clear scripts: `db:clea
 - `drizzle/` — SQL migrations and Drizzle Kit metadata
 - `scripts/` — Python embedding import, rating-matching script
 - `proxy.ts` — Route protection (dashboard, user, API) using NextAuth with DB session validation
+
+## Sync (new-anime ingest)
+
+Kizuna ships with a weekly sync that pulls newly-FINISHED anime from the AniList GraphQL API into the catalog.
+
+### Pieces
+
+| Piece | Purpose |
+|-------|---------|
+| `src/db/sync-new-anime.ts` | Shared core: AniList fetch, franchise-id assignment, Qwen3 embedding via DeepInfra, DB writes |
+| `scripts/sync_new_anime.mjs` | Manual CLI (Bun). Reads/writes `scripts/sync_state.json` |
+| `app/api/cron/sync/route.ts` | Vercel Cron handler; auth via `Authorization: Bearer $CRON_SECRET` |
+| `vercel.json` | Schedules `/api/cron/sync` every Sunday at 03:00 UTC |
+
+### Required environment variables
+
+- `DEEPINFRA_API_KEY` — same key used by the reranker; the sync uses `Qwen/Qwen3-Embedding-8B` via the DeepInfra OpenAI-compatible embeddings endpoint.
+- `CRON_SECRET` — a random token that Vercel injects on the `Authorization` header when it calls `/api/cron/sync`. Generate one with:
+
+  ```bash
+  openssl rand -base64 32
+  ```
+
+### Manual run
+
+```bash
+# First run (seed the lookback window)
+bun run db:sync-new-anime -- --since 2025-01-01
+
+# Dry run (no DB writes)
+bun run db:sync-new-anime -- --dry-run
+
+# Subsequent runs use scripts/sync_state.json automatically
+bun run db:sync-new-anime
+```
+
+`scripts/sync_state.json` (git-ignored) holds `{ "lastSyncDate": "YYYY-MM-DD" }` and is rewritten on every successful non-dry-run.
+
+### What it does
+
+1. Fetches all `FINISHED` anime with `startDate > lastSyncDate` from AniList, paginating with a ~2100ms delay to respect the rate limit, retrying 429/5xx with backoff.
+2. Filters out anime whose `anilist_id` is already in `all_anime` (idempotency).
+3. Assigns `franchise_id` (Kizuna's own DB id, not AniList's):
+   - Inherits from a PREQUEL/SEQUEL relative already in the DB.
+   - On multi-franchise merges, picks the franchise whose root has the earliest start date (same `betterRoot` tiebreak used by the original import).
+   - BFS's across the new batch so siblings in the same new cohort share an id.
+   - Standalone cohorts become their own franchise rooted at the earliest-start member.
+4. Tags are filtered to `rank >= 65`. Unknown genres/tags discovered in the batch are inserted into `genre` / `tags` before use.
+5. Generates embeddings via DeepInfra (`Qwen/Qwen3-Embedding-8B`), truncated/normalized to `halfvec(3920)`.
+6. Inserts `all_anime`, genre/tag relations, embeddings, and applies franchise-id updates to affected existing rows.
+
+### Cron behavior
+
+Because Vercel's serverless filesystem is ephemeral, `/api/cron/sync` does not read `sync_state.json`. It derives a conservative lookback from the max `release_year` in the DB (padded by 30 days). Re-fetched rows are filtered out by the `anilist_id` unique constraint, so overlap is safe.
 
 ## Recommendation system
 
