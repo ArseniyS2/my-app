@@ -10,9 +10,13 @@ function isProtected(pathname: string) {
   );
 }
 
-/** Also protect API routes (except /api/auth which handles login). */
+/** Also protect API routes (except /api/auth and /api/cron which use their own auth). */
 function isProtectedApi(pathname: string) {
-  return pathname.startsWith("/api/") && !pathname.startsWith("/api/auth");
+  return (
+    pathname.startsWith("/api/") &&
+    !pathname.startsWith("/api/auth") &&
+    !pathname.startsWith("/api/cron")
+  );
 }
 
 export async function proxy(request: NextRequest) {
@@ -38,5 +42,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/user/:path*", "/api/((?!auth).*)"],
+  matcher: ["/dashboard/:path*", "/user/:path*", "/api/((?!auth|cron).*)"],
 };
